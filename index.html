@@ -1229,7 +1229,7 @@ function renderModalPhotos(c){
     } else {
       photos.push(`<div style="position:relative;flex-shrink:0">
         <img src="${imgSrc(c.image).replace('/low.webp','/high.webp')}" alt="" onerror="this.style.display='none'">
-        <button class="remove-photo" onclick="event.stopPropagation();removeCardImage(${c.id})" style="position:absolute;top:4px;right:4px" title="Bild löschen">✕</button>
+        <button class="remove-photo" onclick="event.stopPropagation();removeCardImage('${c.id}')" style="position:absolute;top:4px;right:4px" title="Bild löschen">✕</button>
       </div>`);
     }
   }
@@ -1237,7 +1237,7 @@ function renderModalPhotos(c){
     c.photos.forEach((p,i)=>{
       photos.push(`<div style="position:relative;flex-shrink:0">
         <img src="${p}" alt="" style="height:140px;border-radius:10px" onerror="this.parentElement.style.display='none'">
-        <button class="remove-photo" onclick="event.stopPropagation();removePhotoFromCard(${c.id},${i})" style="position:absolute;top:4px;right:4px">✕</button>
+        <button class="remove-photo" onclick="event.stopPropagation();removePhotoFromCard('${c.id}',${i})" style="position:absolute;top:4px;right:4px">✕</button>
       </div>`);
     });
   }
