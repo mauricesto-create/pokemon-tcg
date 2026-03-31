@@ -657,7 +657,8 @@ canvas{max-width:100%!important}
     </div>
     <input type="file" id="modalCameraInput" accept="image/*" capture="environment" style="display:none">
     <input type="file" id="modalGalleryInput" accept="image/*" style="display:none">
-    <div style="margin-bottom:16px"><canvas id="modalPriceChart" height="120"></canvas></div>
+    <div id="priceChartWrap" style="margin-bottom:16px;display:none"><canvas id="modalPriceChart" height="120"></canvas></div>
+    <div id="priceChartHint" style="margin-bottom:12px;text-align:center;font-size:12px;color:var(--text2);display:none">Preisverlauf erscheint nach der ersten Preisänderung</div>
     <div class="detail-actions">
       <button class="btn btn-secondary" onclick="closeModal()">Schließen</button>
       <button class="btn btn-danger" id="modalDeleteBtn">Löschen</button>
@@ -2001,13 +2002,20 @@ function openModal(id){
 
   // Price history chart
   if(modalChart){modalChart.destroy();modalChart=null}
-  if(c.priceHistory&&c.priceHistory.length>1){
+  const chartWrap=document.getElementById('priceChartWrap');
+  const chartHint=document.getElementById('priceChartHint');
+  if(c.priceHistory&&c.priceHistory.length>=1){
+    chartWrap.style.display='block';
+    chartHint.style.display='none';
     modalChart=new Chart(document.getElementById('modalPriceChart'),{
       type:'line',
       data:{labels:c.priceHistory.map(p=>p.date),datasets:[{data:c.priceHistory.map(p=>p.price),
-        borderColor:COLORS?.accent||'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',fill:true,tension:.3,pointRadius:3}]},
+        borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',fill:true,tension:.3,pointRadius:4}]},
       options:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:'#f1f5f9'},ticks:{callback:v=>v+'€',font:{size:10}}}}}
     });
+  } else {
+    chartWrap.style.display='none';
+    chartHint.style.display='block';
   }
 
   document.getElementById('modalDeleteBtn').onclick=async()=>{
