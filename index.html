@@ -1996,28 +1996,23 @@ function editCondition(cardId){
   if(!cell) return;
   const current=c.grade||c.condition||'';
   cell.innerHTML=`<div style="display:flex;align-items:center;gap:6px">
-    <select id="editCondSelect" style="font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-weight:700">
-      <option value="">–</option>
-      <option value="NM"${current==='NM'?' selected':''}>NM</option>
-      <option value="LP"${current==='LP'?' selected':''}>LP</option>
-      <option value="MP"${current==='MP'?' selected':''}>MP</option>
-      <option value="HP"${current==='HP'?' selected':''}>HP</option>
-      <option value="DMG"${current==='DMG'?' selected':''}>DMG</option>
-      ${[10,9.5,9,8.5,8,7.5,7,6.5,6,5,4,3,2,1].map(g=>`<option value="PSA ${g}"${current===('PSA '+g)?' selected':''}>PSA ${g}</option>`).join('')}
-      ${[10,9.5,9,8.5,8,7.5,7,6.5,6,5,4,3,2,1].map(g=>`<option value="CGC ${g}"${current===('CGC '+g)?' selected':''}>CGC ${g}</option>`).join('')}
-    </select>
+    <input type="text" id="editCondInput" value="${current}" placeholder="z.B. NM, PSA 10..."
+      style="width:120px;font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-weight:700"
+      onkeydown="if(event.key==='Enter')saveCondition('${cardId}')">
     <button onclick="saveCondition('${cardId}')"
       style="font-size:12px;padding:4px 10px;border-radius:8px;background:var(--accent);color:#000;font-weight:700;border:none;cursor:pointer">OK</button>
   </div>`;
+  document.getElementById('editCondInput').focus();
+  document.getElementById('editCondInput').select();
 }
 
 async function saveCondition(cardId){
-  const sel=document.getElementById('editCondSelect');
-  if(!sel) return;
-  const val=sel.value;
+  const input=document.getElementById('editCondInput');
+  if(!input) return;
+  const val=input.value.trim();
   const c=cards.find(x=>x.id===cardId);
   if(!c) return;
-  if(val.startsWith('PSA ')||val.startsWith('CGC ')){c.grade=val;c.condition=''}
+  if(/^(PSA|CGC|BGS|ACE)\s/i.test(val)){c.grade=val;c.condition=''}
   else{c.condition=val;c.grade=''}
   await updateCard(c);
   await loadCards();
