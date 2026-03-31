@@ -1,0 +1,13 @@
+{
+  "name": "Maurice.tcg Collection",
+  "short_name": "Maurice.tcg",
+  "description": "Pokémon TCG Collection Tracker",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#111318",
+  "theme_color": "#111318",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "logo.png", "sizes": "any", "type": "image/png" }
+  ]
+}
