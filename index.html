@@ -377,6 +377,13 @@ canvas{max-width:100%!important}
   <div style="margin-bottom:14px">
     <h2 style="font-size:22px;font-weight:800">Karte hinzufügen</h2>
   </div>
+  <!-- Add Tabs -->
+  <div style="display:flex;gap:0;margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+    <button class="btn" id="addTabApi" onclick="switchAddTab('api')" style="flex:1;border-radius:0;font-size:13px;font-weight:700">API-Suche</button>
+    <button class="btn btn-secondary" id="addTabManual" onclick="switchAddTab('manual')" style="flex:1;border-radius:0;font-size:13px;font-weight:700;border:none">Manuell anlegen</button>
+  </div>
+  <!-- Tab 1: API Search (existing flow) -->
+  <div id="addTabApiContent">
   <!-- Step 1: Search -->
   <div id="addStep1">
     <div class="search-box">
@@ -477,6 +484,72 @@ canvas{max-width:100%!important}
     <button class="btn" onclick="saveCard()">Zur Sammlung hinzufügen</button>
   </div>
   </div>
+  <!-- Tab 2: Manual add -->
+  <div id="addTabManualContent" style="display:none">
+    <div class="form-group">
+      <label class="form-label">Name *</label>
+      <input class="form-input" type="text" id="manualName" placeholder="z.B. Glurak VMAX TG30/TG30">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Kategorie</label>
+      <select class="form-select" id="manualCategory">
+        <option value="Binder">Binder</option>
+        <option value="Eevee Binder">Eevee Binder</option>
+        <option value="Random Binder">Random Binder</option>
+        <option value="Slabs">Slabs</option>
+        <option value="Sealed">Sealed</option>
+        <option value="Sealed Promos">Sealed Promos</option>
+        <option value="151 Master">151 Master JP</option>
+        <option value="Terastal Master">Terastal Master</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Sprache</label>
+      <select class="form-select" id="manualLang">
+        <option value="JP">Japanisch (JP)</option>
+        <option value="DE">Deutsch (DE)</option>
+        <option value="EN">Englisch (EN)</option>
+        <option value="FR">Französisch (FR)</option>
+        <option value="CN">Chinesisch (CN)</option>
+        <option value="CH">Chinesisch Trad. (CH)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Zustand</label>
+      <select class="form-select" id="manualCondition">
+        <option value="NM">Near Mint (NM)</option>
+        <option value="EX">Excellent (EX)</option>
+        <option value="GD">Good (GD)</option>
+        <option value="LP">Light Played (LP)</option>
+        <option value="PO">Poor (PO)</option>
+        <option value="Sealed">Sealed</option>
+      </select>
+    </div>
+    <div class="form-group" id="manualGradeGroup" style="display:none">
+      <label class="form-label">Grade</label>
+      <select class="form-select" id="manualGrade">
+        <option value="">Kein Grade</option>
+        <option value="PSA 10">PSA 10</option>
+        <option value="PSA 9">PSA 9</option>
+        <option value="PSA 8">PSA 8</option>
+        <option value="PSA 7">PSA 7</option>
+        <option value="CGC Pristine 10">CGC Pristine 10</option>
+        <option value="CGC 9.5">CGC 9.5</option>
+        <option value="CGC 9">CGC 9</option>
+        <option value="ACE 10">ACE 10</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Preis (€) *</label>
+      <input class="form-input" type="number" id="manualPrice" step="0.01" placeholder="z.B. 25.00">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Bild-URL (optional)</label>
+      <input class="form-input" type="text" id="manualImageUrl" placeholder="https://...">
+    </div>
+    <button class="btn" onclick="saveManualCard()">Zur Sammlung hinzufügen</button>
+  </div>
+  </div>
 </div>
 
 <!-- ═══ SETTINGS VIEW ═══ -->
@@ -502,13 +575,6 @@ canvas{max-width:100%!important}
     <div class="left">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       <div><div class="label">Sammlung exportieren</div><div class="desc">Als JSON-Datei sichern</div></div>
-    </div>
-    <div class="right">›</div>
-  </div>
-  <div class="settings-item" onclick="updateAllPrices()">
-    <div class="left">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-      <div><div class="label">Preise aktualisieren</div><div class="desc" id="priceUpdateStatus">Cardmarket-Preise via TCGdex</div></div>
     </div>
     <div class="right">›</div>
   </div>
@@ -1097,6 +1163,7 @@ async function modalPromptImageUrl(){
   if(!c) return;
   if(!c.photos) c.photos=[];
   c.photos.push(data);
+  c.manualImage=true;
   await updateCard(c);
   await loadCards();
   renderModalPhotos(c);
@@ -1188,6 +1255,7 @@ async function removeCardImage(id){
   const c=cards.find(x=>x.id===id);
   if(!c) return;
   c.image='';
+  c.manualImage=false;
   await updateCard(c);
   await loadCards();
   renderModalPhotos(c);
@@ -1201,6 +1269,7 @@ async function setCardImageUrl(id){
   const c=cards.find(x=>x.id===id);
   if(!c) return;
   c.image=url;
+  c.manualImage=true;
   await updateCard(c);
   await loadCards();
   renderModalPhotos(c);
@@ -1654,7 +1723,7 @@ async function matchAllImages(){
   const SEALED_IMG="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='420' viewBox='0 0 300 420'%3E%3Crect width='300' height='420' rx='16' fill='%231a1f2e'/%3E%3Crect x='40' y='60' width='220' height='160' rx='14' fill='%23252d45' stroke='%23d4a44a' stroke-width='3'/%3E%3Crect x='32' y='44' width='236' height='34' rx='10' fill='%232d3655' stroke='%23d4a44a' stroke-width='3'/%3E%3Crect x='138' y='44' width='24' height='180' fill='%23d4a44a' opacity='0.15'/%3E%3Cline x1='40' y1='140' x2='260' y2='140' stroke='%23d4a44a' stroke-width='1' opacity='0.2'/%3E%3Ccircle cx='150' cy='120' r='30' fill='%23d4a44a' opacity='0.15' stroke='%23d4a44a' stroke-width='2' stroke-opacity='0.6'/%3E%3Ctext x='150' y='130' text-anchor='middle' font-family='system-ui' font-size='28' fill='%23d4a44a' opacity='0.8'%3E%E2%9C%A7%3C/text%3E%3Ctext x='150' y='290' text-anchor='middle' font-family='system-ui,sans-serif' font-size='28' font-weight='800' letter-spacing='6' fill='%23d4a44a'%3ESEALED%3C/text%3E%3Cline x1='70' y1='305' x2='230' y2='305' stroke='%23d4a44a' stroke-width='2' opacity='0.4'/%3E%3Ctext x='150' y='345' text-anchor='middle' font-family='system-ui' font-size='13' fill='%23d4a44a' opacity='0.5'%3ECOLLECTION ITEM%3C/text%3E%3C/svg%3E";
   let sealedFixed=0;
   for(const c of cards){
-    if(c.category==='Sealed'&&c.image!==SEALED_IMG){
+    if(c.category==='Sealed'&&c.image!==SEALED_IMG&&!c.manualImage){
       c.image=SEALED_IMG;
       await updateCard(c);
       sealedFixed++;
@@ -1663,9 +1732,11 @@ async function matchAllImages(){
   if(sealedFixed){await loadCards();renderDashboard();status.textContent=sealedFixed+' Sealed-Produkte aktualisiert.'}
 
   // Fix JP promo cards that got wrong EN images — clear them so they get re-matched
+  // Skip cards with manually-set images
   let jpPromoFixed=0;
   for(const c of cards){
     if(!c.image||c.image.startsWith('data:')) continue;
+    if(c.manualImage) continue;
     const info=extractSetInfo(c.name);
     if(!info) continue;
     const su=info.set.toUpperCase();
@@ -1798,6 +1869,118 @@ async function saveCard(){
 }
 
 // ═══════════════════════════════════════════════
+// Add View: Tab Switching & Manual Card
+// ═══════════════════════════════════════════════
+function switchAddTab(tab){
+  const apiBtn=document.getElementById('addTabApi');
+  const manualBtn=document.getElementById('addTabManual');
+  const apiContent=document.getElementById('addTabApiContent');
+  const manualContent=document.getElementById('addTabManualContent');
+  if(tab==='api'){
+    apiBtn.className='btn';
+    manualBtn.className='btn btn-secondary';
+    manualBtn.style.border='none';
+    apiContent.style.display='';
+    manualContent.style.display='none';
+  } else {
+    manualBtn.className='btn';
+    manualBtn.style.border='';
+    apiBtn.className='btn btn-secondary';
+    apiContent.style.display='none';
+    manualContent.style.display='';
+  }
+}
+
+// Show grade field when Slabs selected (manual tab)
+document.getElementById('manualCategory').addEventListener('change',e=>{
+  document.getElementById('manualGradeGroup').style.display=e.target.value==='Slabs'?'block':'none';
+});
+
+async function saveManualCard(){
+  const name=document.getElementById('manualName').value.trim();
+  const price=parseFloat(document.getElementById('manualPrice').value);
+  if(!name){alert('Bitte einen Namen eingeben.');return}
+  if(!price&&price!==0){alert('Bitte einen Preis eingeben.');return}
+  const imageUrl=document.getElementById('manualImageUrl').value.trim();
+  const card={
+    name: name,
+    tcgdexId: '',
+    setId: '',
+    setName: document.getElementById('manualCategory').value,
+    localId: '',
+    image: imageUrl||'',
+    manualImage: imageUrl?true:false,
+    rarity: '',
+    category: document.getElementById('manualCategory').value,
+    language: document.getElementById('manualLang').value,
+    condition: document.getElementById('manualCondition').value,
+    grade: document.getElementById('manualGrade').value||'',
+    price: price,
+    priceTrend: null,
+    photos: [],
+    priceHistory: [{date:new Date().toISOString().slice(0,10), price:price}],
+    dateAdded: new Date().toISOString()
+  };
+  await addCard(card);
+  await loadCards();
+  // Reset form
+  document.getElementById('manualName').value='';
+  document.getElementById('manualPrice').value='';
+  document.getElementById('manualImageUrl').value='';
+  document.getElementById('manualCategory').value='Binder';
+  document.getElementById('manualLang').value='JP';
+  document.getElementById('manualCondition').value='NM';
+  document.getElementById('manualGrade').value='';
+  document.getElementById('manualGradeGroup').style.display='none';
+  // Show success & switch to collection
+  setTimeout(()=>{
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.querySelector('[data-view="viewCollection"]').classList.add('active');
+    document.getElementById('viewCollection').classList.add('active');
+    activeFilter='Alle';
+    renderCollection();
+  },400);
+}
+
+// ═══════════════════════════════════════════════
+// Edit Price in Modal
+// ═══════════════════════════════════════════════
+function editPrice(cardId){
+  const c=cards.find(x=>x.id===cardId);
+  if(!c) return;
+  const cell=document.getElementById('modalPriceValue');
+  if(!cell) return;
+  const currentPrice=c.price||0;
+  cell.innerHTML=`<div style="display:flex;align-items:center;gap:6px">
+    <input type="number" id="editPriceInput" value="${currentPrice}" step="0.01"
+      style="width:80px;font-size:14px;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-weight:700"
+      onkeydown="if(event.key==='Enter')saveEditedPrice('${cardId}')">
+    <button onclick="saveEditedPrice('${cardId}')"
+      style="font-size:12px;padding:4px 10px;border-radius:8px;background:var(--accent);color:#000;font-weight:700;border:none;cursor:pointer">OK</button>
+  </div>`;
+  document.getElementById('editPriceInput').focus();
+  document.getElementById('editPriceInput').select();
+}
+
+async function saveEditedPrice(cardId){
+  const input=document.getElementById('editPriceInput');
+  if(!input) return;
+  const newPrice=parseFloat(input.value);
+  if(isNaN(newPrice)) return;
+  const c=cards.find(x=>x.id===cardId);
+  if(!c) return;
+  c.price=newPrice;
+  if(!c.priceHistory) c.priceHistory=[];
+  c.priceHistory.push({date:new Date().toISOString().slice(0,10), price:newPrice});
+  await updateCard(c);
+  await loadCards();
+  renderDashboard();
+  renderCollection();
+  openModal(cardId);
+}
+
+// ═══════════════════════════════════════════════
 // Card Detail Modal
 // ═══════════════════════════════════════════════
 let modalChart=null;
@@ -1810,7 +1993,7 @@ function openModal(id){
   document.getElementById('modalSet').textContent=`${c.setName||''} ${c.localId?'#'+c.localId:''} • ${c.category}`;
 
   document.getElementById('modalGrid').innerHTML=`
-    <div class="detail-cell"><div class="label">Wert</div><div class="value" style="color:var(--accent)">${fmtE(c.price||0)}</div></div>
+    <div class="detail-cell" style="cursor:pointer" onclick="editPrice('${c.id}')"><div class="label">Wert ✏️</div><div class="value" style="color:var(--accent)" id="modalPriceValue">${fmtE(c.price||0)}</div></div>
     <div class="detail-cell"><div class="label">Sprache</div><div class="value">${c.language||'–'}</div></div>
     ${c.grade||c.condition?`<div class="detail-cell"><div class="label">${c.grade?'Grade':'Zustand'}</div><div class="value">${c.grade||c.condition}</div></div>`:''}
     <div class="detail-cell"><div class="label">Hinzugefügt</div><div class="value" style="font-size:12px">${c.dateAdded?new Date(c.dateAdded).toLocaleDateString('de-DE'):'–'}</div></div>
@@ -2008,45 +2191,6 @@ document.getElementById('fileInput').addEventListener('change',async e=>{
   e.target.value='';
 });
 
-// ═══════════════════════════════════════════════
-// Price Update via TCGdex
-// ═══════════════════════════════════════════════
-async function updateAllPrices(){
-  const status=document.getElementById('priceUpdateStatus');
-  const cardsWithId=cards.filter(c=>c.tcgdexId);
-  if(!cardsWithId.length){
-    status.textContent='Keine Karten mit TCGdex-ID gefunden';
-    return;
-  }
-  status.textContent=`Aktualisiere 0/${cardsWithId.length}...`;
-  let updated=0;
-  for(const c of cardsWithId){
-    try{
-      const r=await fetch(`${TCGDEX}/de/cards/${c.tcgdexId}`);
-      if(r.ok){
-        const data=await r.json();
-        const newPrice=data.pricing?.cardmarket?.trend;
-        if(newPrice!=null){
-          const oldPrice=c.price;
-          c.price=newPrice;
-          c.priceTrend=oldPrice?((newPrice-oldPrice)/oldPrice*100):0;
-          if(!c.priceHistory) c.priceHistory=[];
-          const today=new Date().toISOString().slice(0,10);
-          if(!c.priceHistory.find(p=>p.date===today))
-            c.priceHistory.push({date:today,price:newPrice});
-          await updateCard(c);
-          updated++;
-        }
-      }
-    }catch{}
-    status.textContent=`Aktualisiere ${updated}/${cardsWithId.length}...`;
-    await new Promise(ok=>setTimeout(ok,100)); // Rate limit
-  }
-  await loadCards();
-  status.textContent=`${updated} Preise aktualisiert!`;
-  renderDashboard();
-  setTimeout(()=>{status.textContent='Cardmarket-Preise via TCGdex'},3000);
-}
 
 // ═══════════════════════════════════════════════
 // Export / Import JSON
