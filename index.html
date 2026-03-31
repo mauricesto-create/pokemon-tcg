@@ -12,8 +12,9 @@
 <title>Maurice.tcg</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script>window.COLLECTION_DATA=null;</script>
-<script src="collection-data.js" onerror=""></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -27,6 +28,33 @@
 }
 body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);
   overflow-x:hidden;padding-bottom:calc(72px + var(--safe-b))}
+
+/* ─── Login Screen ─── */
+.login-screen{position:fixed;inset:0;z-index:9998;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.login-screen.hide{display:none}
+.login-box{width:100%;max-width:340px;text-align:center}
+.login-logo{width:100px;height:100px;border-radius:50%;overflow:hidden;margin:0 auto 16px}
+.login-logo img{width:100%;height:100%;object-fit:cover}
+.login-title{font-family:'Outfit','Inter',sans-serif;font-size:24px;font-weight:800;color:#fff;margin-bottom:4px}
+.login-title span{color:var(--accent)}
+.login-sub{font-size:12px;color:var(--text2);margin-bottom:28px}
+.login-input{width:100%;padding:14px 16px;border-radius:12px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-size:15px;margin-bottom:12px;outline:none;transition:.2s}
+.login-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
+.login-input::placeholder{color:var(--text3)}
+.login-btn{width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:700;
+  cursor:pointer;transition:.15s;border:none;margin-bottom:8px}
+.login-btn-primary{background:var(--accent);color:#000}
+.login-btn-primary:active{transform:scale(.98);opacity:.9}
+.login-btn-secondary{background:var(--card);color:var(--text2);border:1px solid var(--border)}
+.login-btn-secondary:active{transform:scale(.98)}
+.login-error{color:var(--red);font-size:12px;margin-top:8px;min-height:18px}
+.login-divider{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--text3);font-size:11px}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+/* ─── App Wrapper (hidden until logged in) ─── */
+.app-wrapper{display:none}
+.app-wrapper.show{display:block}
 
 /* ─── Splash Screen ─── */
 .splash{position:fixed;inset:0;z-index:9999;background:#111318;
@@ -260,6 +288,24 @@ canvas{max-width:100%!important}
 </head>
 <body>
 
+<!-- Login Screen -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo"><img src="data:image/webp;base64,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" alt=""></div>
+    <div class="login-title">MAURICE<span>.TCG</span></div>
+    <div class="login-sub">Collection Tracker</div>
+    <input type="email" class="login-input" id="loginEmail" placeholder="E-Mail" autocomplete="email">
+    <input type="password" class="login-input" id="loginPassword" placeholder="Passwort" autocomplete="current-password">
+    <button class="login-btn login-btn-primary" onclick="doLogin()">Anmelden</button>
+    <div class="login-divider">oder</div>
+    <button class="login-btn login-btn-secondary" onclick="doRegister()">Konto erstellen</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- App Wrapper (hidden until logged in) -->
+<div class="app-wrapper" id="appWrapper">
+
 <!-- Splash Screen -->
 <div class="splash" id="splash">
   <div class="splash-logo"><img src="data:image/webp;base64,UklGRuoWAABXRUJQVlA4WAoAAAAQAAAAdwAAdwAAQUxQSHwEAAABDrrWtreNHJKittuznbOtM7oE55xztpwry9VsNzN7Hc52mXMOvZy04xy6cbe5ctqcd4bEOUNqxAHxO1Xfzx/4GREQ3LaRJNnOprfgTddedf4A9pikHQAIMzfNPfHpL9v2mBIbtJ8+MXfTTLlPmsA1xsoANl215f2lw6YS26WwRbncQZeQdAD0hx/9ZgrmK6oZcxnMUNVyJ0Iz7Bdf7ow9CHDmcHTCiOTLmrFUIkM9i0g7Gp4ZIQlOPAG45MW9RkQ1l3WSVUUkvOgB1P4QYmAwWrvFTsNoAMSh7r+nwbdGcmWxxolOfjuo9XUpcM2ikWxFrFMhssgR0ppaY/RfK/W9FkJFAkdxHY0d8Oa9JoPURkCCsv13cor+5yLLUiu9yOcMjW3bHt1vlnOpmewFwa6rgw3PrdYUB6givrHoSnHW2Kzk4gRZZXwWUmtxwY7Vms7Qy45gSYrb9xbhksLtVtSNHpxSw5ESD6Jr4fmBDBDHCMBHainISXErF+Gi+NZ1qYPz9/FqOCluz1/H+JHgjF2r1RylSosoqTwXdBfNsjhLL4qUq5peKMJloaIn4GE5ZZzmKcMIlUznHcxyt8HwTRVPkK2rFRynSkimp4DZSZPbnllMUxL3DmjuPlibXpxMy28VmUJ6C2FKXCYqJKjSrq1EvqeDNpE1891FUFGDsFb+OacD/nmNFHBPkekkP5kSjJkSeIxyCjg/gyFE4PxyCnjJLFOCl7aEGKcdkpwSWIJHDKR4rOymZG6RFu4vcmrgL5BA0DtpyJF7SFI8XnbTMjfQDj6RFWpQCehg4x+SUwMLQoSrJBNyhGiEeePpwcs88B5NvIfurzQ/Cd3eUcP0wNL0buTVIChu5mSFIlSap6mi/YQqwi+SUQSk3S40LdLsoYpG/ncm3UJ0xyu64zPd+Yju/Et3vUF3fUV3PUl3/Ux2v0B3f0R4P0h3/0t3v0/3fIPueQ7Z8yu653V0zyfJnsfSPX8me95O936B7H0K3fsjsvdldO8Hyd6HUr7/nZJmKSQvswjANCVb3feohGR6QHDewczxJoZvogTTGfCwOeU2ThlGQBWmeMFtjxdEikqItbvosrwoUq4GJDhjl7sFVFpMmip5zt+XO7oEALfnT5oqem7lzEkBfGthWpceyFwUAF+EBREMoBs9KK4VU5EH0Y3WzxS373XrpV7C7VDAii7Y4ZK87AhFWNJZY+PKbMwq47OsBdDBhuccKaEivkGAPSYxHt1vlmtvZC8IUZzAJjlF/3NTd0kv8jlDY1hmB7x5r9Q5hAASlNey2XX1XzOyUtMDVCRwFZu11+KaxaLvNfwZQ2SRi47XxaQDDL41ktv8Z57o5LcDICSokSEGBiMjorYaWFVERgMgDqiZAcAlL+4tN9hpCS/6UncdYEiAM4ejE6WRQLOKVoaWRpl2NDyz9HfhCCUA6A8/+m3yx6kZ80Q9hk7+AkIz7Jd/Pg4xLg07m67a8v7S4Wof2qWwRXmig64x0Q4AhJmb5p749Jdte8po0H76xNxNM+U+qUU/AFZQOCBIEgAA8EAAnQEqeAB4AD5pKo9FpCKhGHw+7EAGhKAMegaS4U2Xxi739PvgPRXt2eeF9MP9032X+tf672AP2A63r+/YI7/IPoA+NniH+A8HfIn8e9v+Q50n5nfYF+F62/6rvr+VOoK7r5RegF7efZv+f8gHuE6o/hj2AP1a/4frZ3134T/Y/8v3AP6H/Y/+X/fvy0+S3/s+7P23fUf/k/0vwE/zn+0/7z84v8N///rP9hv7aeyD+uDsdkWdRpmJlkbZ3/7cTGP2+wmRRN1KUD2ytdUq/C2w+3LTQj0q5XJlIHF8WBLZKFiOP/C8Ga9KuKIi20z7w2wzjBWWcfMGpmQOEP8j2I9hv0EQb+fccZp7j60YsmpSDH7HbzcXnPbQ/w/yDhxDzSa7IFr5kq9R5hr5t430bFr4hpWj9zpuC7FauejSGz9iE6GdTEy2TEdtzc/ZbIhDXz9jEhOc2BoYPg94yxIEC5/LaooVEOwHx6NnjcaVcrZqCl84EYyW/GXQbOuilgRAGhENPIfHBr6e4ZRBrGd9AAmqdWXUA2JgwPZI9n65lEIAzYHwE3M/xRacfNWXrFR1VXU5miVKe1yQmHjvWQsdxS6UTBaQ7YjhfDb7nHU2b4DRpIGinfeKasjWE1jkRZVibvCMOAnMHqR45OYicb5syIHHfxsVVkscmDJBjppxp0NNh5auTknVwUly3DhnHk+gAP7+pThyOR7HyB1m5qZ45SNf1Zu4ewPwoAot+8L7n0cONQAi4lF3SuZb2yX4+qz178H3k3ILm95skLJ8HW93GWY7jFOerJoc9N/f1jGm3aPpqsumKk5jhthGxybx4AlqhON+ykZzmk21CtHkVbeYopTwK2I3fpmFT80t1zJFqeusGO0uNp/6PIkMSkj3h4Y1dD0NTKKd1BW4KnC7GhgNnTjRuBXG0d+jICvdONSKnUEH6y3umEBGXdRUTmmGqga6Ij/MxnWM4zU1N1085DOUUkF0VSMJ1YvAPfwEHFo4xCrJH+0oddPEMsWvqyoVk6y7cryhJcKFl3DlDuJY5Ug6HGZZzdIGjBlMbYzP9gEjYhJVyN61CxIVKpqvhMYpEDoaKHasc/y/iIbvZ78HDYpczRRBVDXxCsoXFzB2keWGEUagr6jLcm2fOnHV82q6GiQ1Co7UXLAT/wS1OjYV8lg7mrJ/j+ypLkrE1aOT6O7sEOOT1/OHuei1DsfsOxRbTPJXfOCqZVT28FSB2D0TVpNo6axlUhYn+w3WWKQvSMFrGFgWBoiFR+xHCPnRwyW4+7mCf8E4xS3AzrM4amTodP/yQkrmwJ/aXSuKNqM9xSuwvXaUpO1qFRDTx8rryfRL1oYGDFBz81zKApL/hOeMOsIWl6/cb7O6im2TLsfteSP03CqPvOpHbazOgHLO+Xt6na1CfocPcJCgDOeiqHSsgw9bqsbLjCcFFxfB/N1+Y2mb5oxyEf+GWd0oNrb/qGOHLkiDJzLniGh//xX1PgxMajuxdLdvlimucw7S2Cl7DTrzo84GTk61nHb/L8JZr1N1gap91ibKnlFkRbydDy7mQLIDt4zsa85rx9yMnwsF0ajat57XKI/GEOQYxZQw/l4zTrEtVRiaNzZcvtC1PrGgo2z6iULDtlTLm6QzRTtcXySIdQCewzkox02kUPQ7etyjELtBBtNNTwAiRQV43+vl6IqSTPwCadQ7gIjZZ91BTLbhoKPffXszALh547oQPvDv26zPMUqQlzHLStZD/7rU5M8mf9kMBQtNl+FdjXX68+1ovT7IawVSiy/roHmI+RYeYEKqXEaIPb7p7ZsNGptj1G1XHz7A7qmGz1AkobOupTGlx44c3uP7+7vU6krKOd/hA7oQ5Y4N2hdI453fhQjdAcxRi4liggQFraeJm7ldxAR40zqzSx3IZeuzMUumbaCUnEDiJQZ8jp67kkGPrKcHsLJCUoJ6DPMiMikKWnztO4VGL+i/RH6FmUdTRPJsgWxPMQCXbBYvTLvZs9Wmuh/tAOPb7h02vzAZ/8VAhtdI47t82otVGlICTiboAozHaA4zKi+ryansfywGyax14pKodeiRqAXPo+lE8YTz/qYdYh4MBshK7XCULGaXf1aA+WgbhbWwkq0vAnWDJWOZh6xdUbEp1KW96FvVaf3xCctRak1thvDDZTdiXfmUXKNbdp1MQiCuPsArLy5Eeg1D2HhWpkvaiJ4/nigALhD+Yw2jN1c6ohpbAVa8G6fPHawA1lgI7m7BtnimeRTN7UR19dQPnRn/JK5Thbvt96b+uRgX62sUL5CVNsquFn2rIWX9UQmiyceRb3ZZweTCyf1lVpH/uG/v9STLbZgsa/fuXWVX12zEh0VhfPG49rydo8p0j1TJUH4OBJ8jKjaZqgFIAOrGB0N0iBmFzx+ifMsbpXEZV7RiRtm8sm8LJX8Odhpi3jEkv6r+wStFalHryQtBvUzZm3skvNeylKG30kL1/u/0dNQf2zadNPSuPG5vtWRfBaYsAczE9KUgk65TJWf57FF7CBYRSkq2fk8Skvp2LMySz3SiNpdu7u09vSrUbXymJ4uDN0C787ggYdEKgjfPCNI9voP6hqFCBi0l6vDFQHQOJM+mIb715xtVtO8qaqa1vP8Xs332JI6yazckAtXaEih85x/wztI15oYCRg6+dB/V4jRIPaOvYId63pgoRu4xJPPNkYM7aS/J+yaqpRYSKdUVqG2BhWJ+sATdhk7wgUKV3+5AlYKNHWiSU9CdtiXxjDkzw+aez/u5DIg1tg2sEHXrxfHY5i49uK2vF7pBuKHueA1p7ejRGdOwgWk5cQm+wEUQBESmJnUOMLdhimdv4/ELbNXDbLgxzobK+SqmxqObOHKuHNnBIu0SFLsCTM86knMNFbO00YvPMq3IVKta+egg9WvtDmtKK+XDd3bG149btKKSl94EjMyGT5XfO4GI1Lh0coGef7tfWWiw0TgkXXHlrIZfS/toWuoogn3XwNkja7CRFRTlp+O0GQ1CRF5uyHrTA43nP3nrXaF05mMq0a6DunBFuo0VV0HmNPfn/o7Yha8ibsXFXSg6dxpluEokEisWlFDOj0H8dRrZxFl36sprI1Mo+pxsF5/ExD62TjaM2NjZC38J+D/I+XqPvrtzmwanAa4fBRaqrc9mUgKTc6HtvZ5vugRye7SsoKYdlNTqoe7h2/qt6r73U1iR1X8M/Nii2H50/9ayM1g/HtOMIkz65oBMu32oVj7RKvVElHVs31Nfg67zWGmkivm7pD3mU/9q+YCLatXCRZr5o8tuG1GXjSWXBG2EPSXsiukpIKIPsJXhl8UfYxOT4zh+rvy9co3//HnZUdmZvu5LBllxdITg4nSBAqCsZCqjXsPK8fFUxP06BhrkYqk+Riwaw+qm5plUahwzm4R9G+SaX+rfIEgSrurR96edKDhz8m6xHVYiREpTOQBZbiR3rWmuJRc3jR0OqcwJlCK8CvXzlj23gP43tEEgrfvPIa2ZEcjO6/ft8ZOfp4uwk6AeHhm6zkjnPdv60xKYAbFYLzD4IWUlFGMrx1nbWKsspCODVF579c7XvPuh+GV405EnYQvw3JzSAZ5SPwWjdiVUVzMCBWXOKbO5sAy6s0sU66dc6IciUNw1TpklxeK6hL9yhDE8GOUnZpSNSdpjMuUP+1r4AH3MZkOngBGpxmiVPPlMkq4Mpmn1pDyQTe3EfCALbBXevkrlierkhFjyhSDx5FAXVB67TL0RWBndpUlrhNKLd6FJle3os25ZoteBksfGBYetbGtyuna07ap7ShYNPUHMKEn/lp6ntGMrqZj4DZ71+RxGWSb649lq1shGjknUoKyOs7M+1AFEQgb0PdCU9MLigN2VP66FO8VP9sRbfMjTMzUWHeXcqZIKmR0ZixWTZ+QeVHDA5i2KgHdExvzWoREB+PjdbrfHJHXRZsQBsebvJKTf934wlWHl6H/cV9WGRGDprI7j4mZb9tSzkC7kYMvDkpeOBDCr9oD8jS9RWgqPTvTGE8nr9mr3TMdhwhiLxIULb96e3GZ/o4FuQx9Albh6wcguDLJMm+EypJ4mNQDKSqWrCiXLik0PiEG+pgMgdED3v3H/+tQHJCI2dL/raoNrdSGoDquEjpaFH8+7o0ESN7POKW6brcxbsE+dtUxaV48eGZEVcpgve6a8fDk2YES+3Tuywo7IIj8xUeExz7RaCCGVxCorPDK4eYav3GsEUbUIEQzbthbKRC9lxmnj7QrCLtrmkmVstSidXb0fTlA8zJMUq6hgC5g8pFFBUs7sahW7hBQJGdutCiOX47EKi738qCjKtnIzwrclOZe/oMH3ApDVlj22s9GWL2IM4qxkhuWZrIu09qvpQbnDHT6yK7dl2g+d/QpvF7iy4g+iBc+QF+gRupYpO+x97eykr03DFn7jNMf0vudkN0mamsRcHu0bbUTxD5hhXn5mC6KD5IzumFRjuKcIB6lmlbF56vycuS4pYgIAb32PXsXZVPoB7Ht/C5LFIvAFUxUWls6Kr/yotjd/lRF2pLfXmHG6Wir5p0r/+U37DDSCQft5Q/e9u8eDfFWhVLdnyf+RGg4Mxwuy0UABPRDy1UwxaTEqYg40HY8FxRAgvhKiryRjIUz/XYvxK6DudBW/PGn15j5H9e/lg6ga3LYtkYN5qB478f/5Q3hVVrO/At1pATj/2dEogEBm/PToqZEC3QEqcsE61jkz6AHz74FdcHA0mCFScIc7dpF7FDO2F6+Npm8MZn1sQoaN+kwzlrX39RSHR14IzhUR6Vp53Q13gzDGL0CWrCHp9+gM+Sghs7Mxb1CJnFzfO7lPiDs+Qn5DtilxDqaa7alhLpsD/tUoo04hsiHckDbJP7BOcqydhDKhRSjT6pQpKtzZCUdjXgjfuch8iyqOY0BWf5qBzretXI6+BHDjR2qX9x7qLZiGFZ4Gr3D0rR+uhfre0Y1A74C0Msv6b+BwZz/7tOTFcOQ2KMRDqDh8dEce7eaFdv8f6HDIq0fj7qt5V/uK1OvWvWX+OFWJYyl4qgRNY7JL8UUxMLFFkLyyNSAiDt4+tind8TzmerGtv/YMRf8eh+18sfnfOIJXWF3vJ06NT+c+tDV96NQ40znOT4Ke+AK4vHRfiwvoTyML19IeeGLbsomewqzTo/m00lR45JylaQ/KvS1K68YYvaTDgKKh8Osu6CuMKX7uNepG4bQxJ15jvoLVDkjZu649uwvHeorYbvNEWlzYP9nb/7Z8gK91AnBH5cJ6YRXZMvb+s7wuM+aUTISrnCk+UYs8XHWkHbUKYMy5QaNKFfQb9ewv74xW72/5JL4qV1rhJGr8Lq5TF+p22Nhp7rrmRwQTZRNnmCZF3S+DiJTvXDcI/bCAcR/Rj30SL7o7zIMOlKH3uDm1bk0HLsv+a9XTyk9LDhVOukx6tw4SPg9YX3feYbVamyHKP+QZiXw2kPplZXliScdB2o1MgFs2JrRp8Qt7KZtCFHC7aoiAl/E4QwE9L4jXHmy9GF2E9yUDnC7XHGx2AsaCbYmET0yDlCSAQDUr01ULYX/YKyxY3QCwI4LaPdcrW68igvIK1uyIAmuzdW4xFmEjfp5DTg+F5lFxlLJM26XLRPqMGgPynqx3Rk6iN68EazYFnBzqUc7EaIkAex9hMWASrFHB4ePDFspEjKjXQXGf7w6Jim60nQ+a7YVV2saGgM3JtGB5uI66C9akPPad0PaDqLCBYVFHH5X5l7pq/f3cD7P9Bl+Tpib0VmtaKPL0I8tAQmcb6Oae41W1JL2gSw3iKbTBxxYxqhppDlCmvWwYXpZA7XdvzDNIenPMWLtvHHfVj4wyE4azlSvCZ6ub/tXTv9TMORFyqQ5FXCmxciX/+ITgAAt/70JKrrpYlP5bHiP3vWA+AdNWdhps2Xw44G4lSGlpy2athTmlL9Vvx8KZJ2vVIpMyAuL0u6P/wraS3tNw9c4HfjFrS+Wq+C3f9H426DG9nvv9jUhQ7sLUe79ZeMV6naZj446sOOGH8jv7/yc64eUGj0YwQqTR4AGHiw6wbC06tZKfoWDsACBXX0YVRRif1uqXjkM2x9baB+i286LHg/GOaJ1AATWfX0sxLLwfZT9MB/Pi45/67VNQ86KL8tyufOxNKR/otNmR97Xfr9oT/+JO34/cXdWvqzOffEAQU/d9b74R0pphWm++cq/q/HADVvGEBWy6t3Nkp7qNjNcO9734FM2ALaqBnnPKaHgHHPccD5KCOId9vB6bf/gvoj3QAAAA" alt=""></div>
@@ -445,12 +491,12 @@ canvas{max-width:100%!important}
     </div>
     <div class="right">›</div>
   </div>
-  <div class="settings-item" onclick="syncForPhone()">
+  <div class="settings-item" style="opacity:.6;cursor:default">
     <div class="left">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-      <div><div class="label">📱 Für Handy speichern</div><div class="desc" id="syncStatus">Komplette App + Daten als eine HTML-Datei</div></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div><div class="label">Cloud-Sync aktiv</div><div class="desc" id="syncStatus">Daten werden automatisch synchronisiert</div></div>
     </div>
-    <div class="right">›</div>
+    <div class="right">✓</div>
   </div>
   <div class="settings-item" onclick="exportCollection()">
     <div class="left">
@@ -495,9 +541,29 @@ canvas{max-width:100%!important}
     <div class="right">›</div>
   </div>
   <div id="missingImgList" style="display:none;margin-bottom:14px"></div>
-  <div style="text-align:center;margin-top:24px;color:var(--text3);font-size:11px">
-    Maurice.tcg v1.1 — Persönliches Tool für Maurice.tcg<br>
+  <div class="settings-item" onclick="doLogout()">
+    <div class="left">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--orange)"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <div><div class="label" style="color:var(--orange)">Abmelden</div><div class="desc" id="loggedInAs">Ausloggen</div></div>
+    </div>
+    <div class="right">›</div>
+  </div>
+  <div style="display:flex;gap:16px;justify-content:center;margin-top:24px">
+    <a href="#" onclick="showLegal('impressum');return false" style="color:var(--text3);font-size:11px;text-decoration:underline">Impressum</a>
+    <a href="#" onclick="showLegal('datenschutz');return false" style="color:var(--text3);font-size:11px;text-decoration:underline">Datenschutzerklärung</a>
+  </div>
+  <div style="text-align:center;margin-top:12px;color:var(--text3);font-size:11px">
+    Maurice.tcg v2.0 — Cloud-Sync &bull; Firebase<br>
     Preise: TCGdex / Cardmarket &bull; Kartendaten: TCGdex API
+  </div>
+</div>
+
+<!-- Impressum / Datenschutz Modal -->
+<div class="modal-overlay" id="legalModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-height:85vh">
+    <div class="modal-handle"></div>
+    <div id="legalContent" style="font-size:13px;line-height:1.7;color:var(--text2)"></div>
+    <button class="btn btn-secondary" style="margin-top:16px" onclick="document.getElementById('legalModal').classList.remove('open')">Schließen</button>
   </div>
 </div>
 
@@ -555,15 +621,31 @@ canvas{max-width:100%!important}
 
 <input type="file" id="jsonInput" accept=".json" style="display:none">
 
+</div><!-- /app-wrapper -->
+
 <script>
 // ═══════════════════════════════════════════════
-// DB & State
+// Firebase Init & State
 // ═══════════════════════════════════════════════
-let db;
+firebase.initializeApp({
+  apiKey: "AIzaSyBeRvOka412X92HF1kimaelBNjZ0rP6M7k",
+  authDomain: "maurice-tcg.firebaseapp.com",
+  projectId: "maurice-tcg",
+  storageBucket: "maurice-tcg.firebasestorage.app",
+  messagingSenderId: "214586774393",
+  appId: "1:214586774393:web:dfe71933bb5cee5b8615a8"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+
+let uid = null;
 let cards = [];
 let charts = {};
 let pendingApiCard = null;
 let activeFilter = 'Alle';
+let bulkMode = false; // suppress re-renders during bulk operations
+let unsubCards = null; // Firestore snapshot listener
 
 const CAT_COLORS = {'Slabs':'#8b5cf6','Binder':'#3b82f6','Sealed':'#10b981','Random Binder':'#f59e0b',
   'Eevee Binder':'#ec4899','151 Master':'#06b6d4','Terastal Master':'#6366f1','Sealed Promos':'#94a3b8'};
@@ -578,59 +660,70 @@ const IMG_ERR='onerror="this.style.display=\'none\';this.parentElement.innerHTML
 function fmt(n){return n.toLocaleString('de-DE',{minimumFractionDigits:0,maximumFractionDigits:0})}
 function fmtE(n){return fmt(n)+'\u2009€'}
 
-// ─── IndexedDB ───
-function openDB(){
-  return new Promise((ok,fail)=>{
-    const req=indexedDB.open('pokevault',2);
-    req.onupgradeneeded=e=>{
-      const d=e.target.result;
-      if(!d.objectStoreNames.contains('cards'))
-        d.createObjectStore('cards',{keyPath:'id',autoIncrement:true});
-    };
-    req.onsuccess=e=>{db=e.target.result;ok(db)};
-    req.onerror=e=>fail(e);
+// ─── Auth Functions ───
+function doLogin(){
+  const email=document.getElementById('loginEmail').value;
+  const pw=document.getElementById('loginPassword').value;
+  const err=document.getElementById('loginError');
+  err.textContent='';
+  if(!email||!pw){err.textContent='Bitte E-Mail und Passwort eingeben';return}
+  auth.signInWithEmailAndPassword(email,pw).catch(e=>{
+    err.textContent=e.code==='auth/invalid-credential'?'Falsche Zugangsdaten':
+      e.code==='auth/user-not-found'?'Kein Konto gefunden':
+      e.code==='auth/too-many-requests'?'Zu viele Versuche, bitte warten':e.message;
+  });
+}
+function doRegister(){
+  const email=document.getElementById('loginEmail').value;
+  const pw=document.getElementById('loginPassword').value;
+  const err=document.getElementById('loginError');
+  err.textContent='';
+  if(!email||!pw){err.textContent='Bitte E-Mail und Passwort eingeben';return}
+  if(pw.length<6){err.textContent='Passwort muss mind. 6 Zeichen haben';return}
+  auth.createUserWithEmailAndPassword(email,pw).catch(e=>{
+    err.textContent=e.code==='auth/email-already-in-use'?'E-Mail bereits registriert':e.message;
+  });
+}
+function doLogout(){
+  if(!confirm('Wirklich abmelden?')) return;
+  auth.signOut();
+}
+
+// ─── Firestore (replaces IndexedDB) ───
+function userCardsRef(){return db.collection('users').doc(uid).collection('cards')}
+
+function startCardListener(){
+  if(unsubCards) unsubCards();
+  unsubCards=userCardsRef().onSnapshot(snap=>{
+    cards=snap.docs.map(doc=>({id:doc.id,...doc.data()}));
+    if(!bulkMode){renderDashboard();renderCollection()}
   });
 }
 
 async function loadCards(){
-  return new Promise(ok=>{
-    const tx=db.transaction('cards','readonly');
-    const store=tx.objectStore('cards');
-    const req=store.getAll();
-    req.onsuccess=()=>{cards=req.result;ok(cards)};
-  });
+  const snap=await userCardsRef().get();
+  cards=snap.docs.map(doc=>({id:doc.id,...doc.data()}));
 }
 
 async function addCard(card){
-  return new Promise(ok=>{
-    const tx=db.transaction('cards','readwrite');
-    tx.objectStore('cards').add(card);
-    tx.oncomplete=()=>ok();
-  });
+  const {id, ...data}=card;
+  await userCardsRef().add(data);
 }
 
 async function deleteCard(id){
-  return new Promise(ok=>{
-    const tx=db.transaction('cards','readwrite');
-    tx.objectStore('cards').delete(id);
-    tx.oncomplete=()=>ok();
-  });
+  await userCardsRef().doc(String(id)).delete();
 }
 
 async function updateCard(card){
-  return new Promise(ok=>{
-    const tx=db.transaction('cards','readwrite');
-    tx.objectStore('cards').put(card);
-    tx.oncomplete=()=>ok();
-  });
+  const {id, ...data}=card;
+  await userCardsRef().doc(String(id)).set(data,{merge:true});
 }
 
 async function clearDB(){
-  return new Promise(ok=>{
-    const tx=db.transaction('cards','readwrite');
-    tx.objectStore('cards').clear();
-    tx.oncomplete=()=>ok();
-  });
+  const snap=await userCardsRef().get();
+  const batch=db.batch();
+  snap.docs.forEach(doc=>batch.delete(doc.ref));
+  await batch.commit();
 }
 
 // ═══════════════════════════════════════════════
@@ -690,7 +783,7 @@ function renderDashboard(){
   // Top 5
   const top5=[...cards].sort((a,b)=>(b.price||0)-(a.price||0)).slice(0,5);
   document.getElementById('dashTop5').innerHTML=top5.map((c,i)=>`
-    <div class="card-item" onclick="openModal(${c.id})">
+    <div class="card-item" onclick="openModal('${c.id}')">
       <div class="card-thumb">${c.photos&&c.photos.length?`<img src="${c.photos[0]}" alt="" loading="lazy">`:c.image?`<img src="${imgSrc(c.image)}" alt="" loading="lazy">`:'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--card),var(--bg))"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>'}</div>
       <div class="card-details">
         <div class="name">${c.name}</div>
@@ -757,7 +850,7 @@ function renderCollection(){
   }
 
   document.getElementById('collCards').innerHTML=filtered.map(c=>`
-    <div class="card-item" onclick="openModal(${c.id})">
+    <div class="card-item" onclick="openModal('${c.id}')">
       <div class="card-thumb">${c.photos&&c.photos.length?`<img src="${c.photos[0]}" alt="" loading="lazy">`:c.image?`<img src="${imgSrc(c.image)}" alt="" loading="lazy">`:'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--card),var(--bg))"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>'}</div>
       <div class="card-details">
         <div class="name">${c.name}</div>
@@ -1134,7 +1227,7 @@ function showMissingImages(){
       </div>
       <a href="https://www.google.com/search?tbm=isch&q=${q}" target="_blank"
         style="flex-shrink:0;font-size:10px;padding:4px 8px;border-radius:6px;background:var(--accent-light);color:var(--accent);text-decoration:none;font-weight:600">🔍</a>
-      <button onclick="event.stopPropagation();openModal(${c.id})"
+      <button onclick="event.stopPropagation();openModal('${c.id}')"
         style="flex-shrink:0;font-size:10px;padding:4px 8px;border-radius:6px;background:var(--bg);color:var(--text2);border:1px solid var(--border);cursor:pointer;font-weight:600">Öffnen</button>
     </div>`;
   }).join('');
@@ -1991,86 +2084,120 @@ document.getElementById('jsonInput').addEventListener('change',async e=>{
   e.target.value='';
 });
 
-// ═══════════════════════════════════════════════
-// Dropbox Sync — save as collection-data.js
-// ═══════════════════════════════════════════════
-function syncForPhone(){
-  if(!cards.length){
-    document.getElementById('syncStatus').textContent='Keine Karten zum Speichern!';
-    return;
-  }
-  document.getElementById('syncStatus').textContent='Erstelle Handy-Version...';
-  // Safely encode card data for embedding in HTML
-  const jsonStr=JSON.stringify(cards).replace(/<\//g,'<\\/');
-  // Clone entire HTML and embed card data
-  const clone=document.documentElement.cloneNode(true);
-  // Remove collection-data.js script and the null initializer
-  clone.querySelectorAll('script[src="collection-data.js"]').forEach(s=>s.remove());
-  clone.querySelectorAll('script').forEach(s=>{
-    if(s.textContent.includes('COLLECTION_DATA=null')||s.textContent.includes('COLLECTION_DATA =null'))
-      s.remove();
-  });
-  // Remove runtime DOM state (rendered cards, charts, modals)
-  const viewsToClean=clone.querySelectorAll('#dashTop5, #catList, #collCards, #apiResults');
-  viewsToClean.forEach(el=>el.innerHTML='');
-  // Inject data script into head — BEFORE other scripts
-  const dataScript=document.createElement('script');
-  dataScript.textContent='window.COLLECTION_DATA = '+jsonStr+';';
-  const head=clone.querySelector('head');
-  const firstScript=head.querySelector('script');
-  if(firstScript) head.insertBefore(dataScript, firstScript);
-  else head.appendChild(dataScript);
-  const html='<!DOCTYPE html>\n'+clone.outerHTML;
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='maurice-tcg.html';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  document.getElementById('syncStatus').textContent='✅ maurice-tcg.html erstellt! In Dropbox legen & am Handy öffnen.';
-  setTimeout(()=>{document.getElementById('syncStatus').textContent='Komplette App + Daten als eine HTML-Datei'},8000);
-}
-
 function clearAllData(){
   if(!confirm('Wirklich ALLE Daten löschen? Das kann nicht rückgängig gemacht werden!')) return;
   clearDB().then(()=>{cards=[];renderDashboard();alert('Alle Daten gelöscht.')});
 }
 
 // ═══════════════════════════════════════════════
-// Init
+// Impressum & Datenschutz
+// ═══════════════════════════════════════════════
+function showLegal(type){
+  const el=document.getElementById('legalContent');
+  if(type==='impressum'){
+    el.innerHTML=`
+      <h2 style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:16px">Impressum</h2>
+      <p><strong>Angaben gem. § 5 TMG</strong></p>
+      <p>Maurice Stommel<br>Höhenweg 33<br>51674 Wiehl<br>Deutschland</p>
+      <p style="margin-top:12px"><strong>Kontakt</strong><br>
+      Diese Webseite dient ausschließlich der persönlichen, nicht-kommerziellen Nutzung
+      zur Verwaltung einer privaten Pokémon-Kartensammlung.</p>
+      <p style="margin-top:12px"><strong>Haftungsausschluss</strong><br>
+      Die Inhalte dieser Seite wurden mit größter Sorgfalt erstellt.
+      Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte wird keine Gewähr übernommen.
+      Kartenwerte und Preise dienen nur der persönlichen Orientierung und stellen keine Finanzberatung dar.</p>
+      <p style="margin-top:12px"><strong>Urheberrecht</strong><br>
+      Pokémon und alle zugehörigen Marken sind Eigentum von The Pokémon Company, Nintendo und Game Freak.
+      Kartenbilder werden über öffentliche APIs (TCGdex, pokemontcg.io) bezogen.
+      Diese Seite steht in keiner Verbindung zu The Pokémon Company.</p>
+    `;
+  } else {
+    el.innerHTML=`
+      <h2 style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:16px">Datenschutzerklärung</h2>
+      <p><strong>Verantwortlicher</strong><br>
+      Maurice Stommel, Höhenweg 33, 51674 Wiehl</p>
+
+      <p style="margin-top:12px"><strong>1. Allgemeines</strong><br>
+      Diese Webseite dient der rein persönlichen Verwaltung einer privaten Pokémon-Kartensammlung.
+      Es werden keine personenbezogenen Daten Dritter erhoben oder verarbeitet.</p>
+
+      <p style="margin-top:12px"><strong>2. Hosting</strong><br>
+      Die Seite wird über GitHub Pages (GitHub Inc., USA) gehostet.
+      GitHub erhebt ggf. technische Zugriffsdaten (IP-Adresse, Browsertyp, Zeitstempel) in Server-Logfiles.
+      Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Bereitstellung der Webseite).
+      Weitere Informationen: <span style="color:var(--accent)">github.com/privacy</span></p>
+
+      <p style="margin-top:12px"><strong>3. Firebase (Google)</strong><br>
+      Für Authentifizierung und Datenspeicherung wird Google Firebase verwendet (Google Ireland Ltd, Gordon House, Barrow Street, Dublin 4, Irland).
+      Verarbeitete Daten:</p>
+      <ul style="margin:8px 0 8px 20px">
+        <li>E-Mail-Adresse (für Login)</li>
+        <li>Sammlungsdaten (Kartennamen, Preise, Bilder-URLs)</li>
+      </ul>
+      <p>Die Daten werden in der EU (europe-west3, Frankfurt) gespeichert.
+      Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).
+      Weitere Informationen: <span style="color:var(--accent)">firebase.google.com/support/privacy</span></p>
+
+      <p style="margin-top:12px"><strong>4. Externe APIs</strong><br>
+      Zum Laden von Kartenbildern und -daten werden folgende externe Dienste kontaktiert:</p>
+      <ul style="margin:8px 0 8px 20px">
+        <li>TCGdex API (api.tcgdex.net)</li>
+        <li>Pokémon TCG API (pokemontcg.io)</li>
+        <li>PriceCharting (pricecharting.com)</li>
+      </ul>
+      <p>Dabei wird Ihre IP-Adresse an diese Dienste übermittelt.</p>
+
+      <p style="margin-top:12px"><strong>5. Cookies & Local Storage</strong><br>
+      Diese Seite verwendet keine Tracking-Cookies und kein Analytics.
+      Firebase nutzt lokalen Speicher (IndexedDB) für Offline-Caching der Sammlungsdaten.</p>
+
+      <p style="margin-top:12px"><strong>6. Ihre Rechte</strong><br>
+      Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung,
+      Datenübertragbarkeit und Widerspruch. Da diese App nur vom Betreiber selbst genutzt wird,
+      können Sie Ihre Daten jederzeit über die App-Einstellungen exportieren oder löschen.</p>
+
+      <p style="margin-top:12px"><strong>7. Aktualität</strong><br>
+      Stand: März 2026</p>
+    `;
+  }
+  document.getElementById('legalModal').classList.add('open');
+}
+
+// ═══════════════════════════════════════════════
+// Init — Firebase Auth State
 // ═══════════════════════════════════════════════
 Chart.defaults.font.family="'Inter',sans-serif";
 
-(async()=>{
-  await openDB();
-  await loadCards();
+auth.onAuthStateChanged(async user=>{
+  const loginScreen=document.getElementById('loginScreen');
+  const appWrapper=document.getElementById('appWrapper');
+  const splash=document.getElementById('splash');
 
-  // Auto-load from embedded COLLECTION_DATA (Dropbox sync / Für Handy speichern)
-  if(!cards.length && window.COLLECTION_DATA && Array.isArray(window.COLLECTION_DATA)){
-    const data=window.COLLECTION_DATA;
-    let withImg=0;
-    for(const c of data){delete c.id; if(c.image) withImg++; await addCard(c);}
+  if(user){
+    // Logged in
+    uid=user.uid;
+    loginScreen.classList.add('hide');
+    appWrapper.classList.add('show');
+    document.getElementById('loggedInAs').textContent=user.email;
+
+    // Start real-time sync
+    startCardListener();
+    // Also do initial load for immediate render
     await loadCards();
-    // Show sync banner
-    const banner=document.createElement('div');
-    banner.style.cssText='position:fixed;top:60px;left:10px;right:10px;z-index:999;background:#1a5c2a;color:#fff;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.4)';
-    banner.textContent=`✅ Sync: ${data.length} Karten geladen (${withImg} mit Bild)`;
-    document.body.appendChild(banner);
-    setTimeout(()=>banner.remove(),5000);
-  }
+    renderDashboard();
 
-  renderDashboard();
-  // Register service worker — force update
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistrations().then(regs=>{
-      regs.forEach(r=>r.unregister());
-    });
-    caches.keys().then(keys=>keys.forEach(k=>caches.delete(k)));
-    setTimeout(()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}),500);
+    // Hide splash
+    setTimeout(()=>splash.classList.add('hide'),1500);
+  } else {
+    // Logged out
+    uid=null;
+    if(unsubCards){unsubCards();unsubCards=null}
+    cards=[];
+    loginScreen.classList.remove('hide');
+    appWrapper.classList.remove('show');
+    splash.classList.add('hide');
   }
-  // Hide splash screen
-  setTimeout(()=>{ document.getElementById('splash').classList.add('hide'); },2000);
-})();
+});
 </script>
 </body>
 </html>
