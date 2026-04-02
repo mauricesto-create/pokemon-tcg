@@ -411,16 +411,7 @@ canvas{max-width:100%!important}
       </div>
       <div class="form-group">
         <label class="form-label">Kategorie</label>
-        <select class="form-select" id="scanCategory">
-          <option value="Binder">Binder</option>
-          <option value="Eevee Binder">Eevee Binder</option>
-          <option value="Random Binder">Random Binder</option>
-          <option value="Slabs">Slabs</option>
-          <option value="Sealed">Sealed</option>
-          <option value="Sealed Promos">Sealed Promos</option>
-          <option value="151 Master">151 Master JP</option>
-          <option value="Terastal Master">Terastal Master</option>
-        </select>
+        <select class="form-select" id="scanCategory"></select>
       </div>
       <div class="form-group">
         <label class="form-label">Zustand / Grade</label>
@@ -459,52 +450,19 @@ canvas{max-width:100%!important}
     </div>
     <div class="form-group">
       <label class="form-label">Kategorie</label>
-      <select class="form-select" id="addCategory">
-        <option value="Binder">Binder</option>
-        <option value="Eevee Binder">Eevee Binder</option>
-        <option value="Random Binder">Random Binder</option>
-        <option value="Slabs">Slabs</option>
-        <option value="Sealed">Sealed</option>
-        <option value="Sealed Promos">Sealed Promos</option>
-        <option value="151 Master">151 Master JP</option>
-        <option value="Terastal Master">Terastal Master</option>
-      </select>
+      <select class="form-select" id="addCategory"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Sprache</label>
-      <select class="form-select" id="addLang">
-        <option value="JP">Japanisch (JP)</option>
-        <option value="DE">Deutsch (DE)</option>
-        <option value="EN">Englisch (EN)</option>
-        <option value="FR">Französisch (FR)</option>
-        <option value="CN">Chinesisch (CN)</option>
-        <option value="CH">Chinesisch Trad. (CH)</option>
-      </select>
+      <select class="form-select" id="addLang"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Zustand</label>
-      <select class="form-select" id="addCondition">
-        <option value="NM">Near Mint (NM)</option>
-        <option value="EX">Excellent (EX)</option>
-        <option value="GD">Good (GD)</option>
-        <option value="LP">Light Played (LP)</option>
-        <option value="PO">Poor (PO)</option>
-        <option value="Sealed">Sealed</option>
-      </select>
+      <select class="form-select" id="addCondition"></select>
     </div>
     <div class="form-group" id="gradeGroup" style="display:none">
       <label class="form-label">Grade</label>
-      <select class="form-select" id="addGrade">
-        <option value="">Kein Grade</option>
-        <option value="PSA 10">PSA 10</option>
-        <option value="PSA 9">PSA 9</option>
-        <option value="PSA 8">PSA 8</option>
-        <option value="PSA 7">PSA 7</option>
-        <option value="CGC Pristine 10">CGC Pristine 10</option>
-        <option value="CGC 9.5">CGC 9.5</option>
-        <option value="CGC 9">CGC 9</option>
-        <option value="ACE 10">ACE 10</option>
-      </select>
+      <select class="form-select" id="addGrade"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Preis (€) — manuell überschreiben</label>
@@ -544,52 +502,19 @@ canvas{max-width:100%!important}
     </div>
     <div class="form-group">
       <label class="form-label">Kategorie</label>
-      <select class="form-select" id="manualCategory">
-        <option value="Binder">Binder</option>
-        <option value="Eevee Binder">Eevee Binder</option>
-        <option value="Random Binder">Random Binder</option>
-        <option value="Slabs">Slabs</option>
-        <option value="Sealed">Sealed</option>
-        <option value="Sealed Promos">Sealed Promos</option>
-        <option value="151 Master">151 Master JP</option>
-        <option value="Terastal Master">Terastal Master</option>
-      </select>
+      <select class="form-select" id="manualCategory"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Sprache</label>
-      <select class="form-select" id="manualLang">
-        <option value="JP">Japanisch (JP)</option>
-        <option value="DE">Deutsch (DE)</option>
-        <option value="EN">Englisch (EN)</option>
-        <option value="FR">Französisch (FR)</option>
-        <option value="CN">Chinesisch (CN)</option>
-        <option value="CH">Chinesisch Trad. (CH)</option>
-      </select>
+      <select class="form-select" id="manualLang"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Zustand</label>
-      <select class="form-select" id="manualCondition">
-        <option value="NM">Near Mint (NM)</option>
-        <option value="EX">Excellent (EX)</option>
-        <option value="GD">Good (GD)</option>
-        <option value="LP">Light Played (LP)</option>
-        <option value="PO">Poor (PO)</option>
-        <option value="Sealed">Sealed</option>
-      </select>
+      <select class="form-select" id="manualCondition"></select>
     </div>
     <div class="form-group" id="manualGradeGroup" style="display:none">
       <label class="form-label">Grade</label>
-      <select class="form-select" id="manualGrade">
-        <option value="">Kein Grade</option>
-        <option value="PSA 10">PSA 10</option>
-        <option value="PSA 9">PSA 9</option>
-        <option value="PSA 8">PSA 8</option>
-        <option value="PSA 7">PSA 7</option>
-        <option value="CGC Pristine 10">CGC Pristine 10</option>
-        <option value="CGC 9.5">CGC 9.5</option>
-        <option value="CGC 9">CGC 9</option>
-        <option value="ACE 10">ACE 10</option>
-      </select>
+      <select class="form-select" id="manualGrade"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Preis (€) *</label>
@@ -772,13 +697,18 @@ const LANG_COLORS = {JP:'#ef4444',DE:'#3b82f6',EN:'#10b981',FR:'#f59e0b',CN:'#8b
 const CAT_ICONS={'Slabs':'🏅','Binder':'📒','Sealed':'🎴','Random Binder':'🃏',
   'Eevee Binder':'🌙','151 Master':'🔴','Terastal Master':'💎','Sealed Promos':'⭐'};
 const TCGDEX='https://api.tcgdex.net/v2';
+const CATEGORIES=[['Binder','Binder'],['Eevee Binder','Eevee Binder'],['Random Binder','Random Binder'],['Slabs','Slabs'],['Sealed','Sealed'],['Sealed Promos','Sealed Promos'],['151 Master','151 Master JP'],['Terastal Master','Terastal Master']];
+const LANGUAGES=[['JP','Japanisch (JP)'],['DE','Deutsch (DE)'],['EN','Englisch (EN)'],['FR','Französisch (FR)'],['CN','Chinesisch (CN)'],['CH','Chinesisch Trad. (CH)']];
+const CONDITIONS=[['NM','Near Mint (NM)'],['EX','Excellent (EX)'],['GD','Good (GD)'],['LP','Light Played (LP)'],['PO','Poor (PO)'],['Sealed','Sealed']];
+const GRADES=[['','Kein Grade'],['PSA 10','PSA 10'],['PSA 9','PSA 9'],['PSA 8','PSA 8'],['PSA 7','PSA 7'],['CGC Pristine 10','CGC Pristine 10'],['CGC 9.5','CGC 9.5'],['CGC 9','CGC 9'],['ACE 10','ACE 10']];
+function fillSelect(id,opts){const el=document.getElementById(id);if(!el)return;el.innerHTML=opts.map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}
 const PKM_NAMES={flamara:'flareon',aquana:'vaporeon',blitza:'jolteon',psiana:'espeon',nachtara:'umbreon',folipurba:'leafeon',glaziola:'glaceon',feelinara:'sylveon',evoli:'eevee',glurak:'charizard',bisaflor:'venusaur',turtok:'blastoise',pikachu:'pikachu',mewtu:'mewtwo',mew:'mew',relaxo:'snorlax',gengar:'gengar',dragoran:'dragonite',arktos:'articuno',zapdos:'zapdos',lavados:'moltres',lugia:'lugia',ho:'ho-oh',celebi:'celebi',rayquaza:'rayquaza',dialga:'dialga',palkia:'palkia',giratina:'giratina',arceus:'arceus',reshiram:'reshiram',zekrom:'zekrom',xerneas:'xerneas',yveltal:'yveltal',solgaleo:'solgaleo',lunala:'lunala',zacian:'zacian',zamazenta:'zamazenta',miraidon:'miraidon',koraidon:'koraidon',bisasam:'bulbasaur',bisaknosp:'ivysaur',glumanda:'charmander',glutexo:'charmeleon',schiggy:'squirtle',schillok:'wartortle',raichu:'raichu',pummeluff:'jigglypuff',vulpix:'vulpix',vulnona:'ninetales',knuddeluff:'wigglytuff',simsala:'alakazam',machomei:'machamp',quappo:'poliwrath',nebulak:'gastly',alpollo:'haunter',onix:'onix',rizeros:'rhydon',chaneira:'chansey',kangama:'kangaskhan',pantimos:'mr. mime',lapras:'lapras',ditto:'ditto',porygon:'porygon',aerodactyl:'aerodactyl',garados:'gyarados',kokowei:'exeggutor',rossana:'jynx',elektek:'electabuzz',magmar:'magmar',pinsir:'pinsir',tauros:'tauros',endivie:'chikorita',feurigel:'cyndaquil',karnimani:'totodile',noctuh:'noctowl',ampharos:'ampharos',marill:'marill',quaxo:'politoed',sonnfel:'sunflora',despotar:'tyranitar',geckarbor:'treecko',flemmli:'torchic',hydropi:'mudkip',kapilz:'breloom',letarking:'slaking',guardevoir:'gardevoir',brutalanda:'salamence',metagross:'metagross',kyogre:'kyogre',groudon:'groudon',chelast:'turtwig',panflam:'chimchar',plinfa:'piplup',lucario:'lucario',knakrack:'garchomp',cresselia:'cresselia',darkrai:'darkrai',shaymin:'shaymin',ottaro:'oshawott',serpifeu:'snivy',floink:'tepig',zoroark:'zoroark',kyurem:'kyurem',igamaro:'chespin',fynx:'fennekin',froxy:'froakie',quajutsu:'greninja',bauz:'rowlet',flamiau:'litten',robball:'popplio',wolwerock:'lycanroc',katagami:'kartana',chimpep:'grookey',hopplo:'scorbunny',memmeon:'sobble',duraludon:'duraludon',zarude:'zarude',felori:'sprigatito',krokel:'fuecoco',kwaks:'quaxly',gierspenst:'gholdengo',miraidon:'miraidon',koraidon:'koraidon',lechonk:'lechonk',fidough:'fidough'};
 const PKM_NAMES_REV=Object.fromEntries(Object.entries(PKM_NAMES).map(([d,e])=>[e,d]));
 function getAltNames(q){const lo=q.toLowerCase();const alts=new Set();alts.add(lo);if(PKM_NAMES[lo])alts.add(PKM_NAMES[lo]);if(PKM_NAMES_REV[lo])alts.add(PKM_NAMES_REV[lo]);for(const[d,e]of Object.entries(PKM_NAMES)){if(d.startsWith(lo)||e.startsWith(lo)){alts.add(d);alts.add(e)}}return[...alts]}
 function dedupeById(arr){const s=new Set();return arr.filter(c=>s.has(c.id)?false:!!s.add(c.id))}
 function imgSrc(url){return url?(url.startsWith('data:')||url.endsWith('.png')||url.endsWith('.jpg')||url.endsWith('.webp')||url.includes('pricecharting.com')?url:url+'/low.webp'):''}
-const IMG_ERR='onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'🃏\'"';
 
+function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
 function fmt(n){return n<1&&n>0?n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}):n.toLocaleString('de-DE',{minimumFractionDigits:0,maximumFractionDigits:0})}
 function fmtE(n){return fmt(n)+'\u2009€'}
 
@@ -992,7 +922,7 @@ function renderCollection(){
     </div>`).join('');
 }
 
-document.getElementById('collSearch').addEventListener('input', renderCollection);
+document.getElementById('collSearch').addEventListener('input', debounce(renderCollection,200));
 
 function filterCollection(cat){
   activeFilter=cat;
@@ -2579,6 +2509,11 @@ function showLegal(type){
 // Init — Firebase Auth State
 // ═══════════════════════════════════════════════
 Chart.defaults.font.family="'Inter',sans-serif";
+
+['scanCategory','addCategory','manualCategory'].forEach(id=>fillSelect(id,CATEGORIES));
+['addLang','manualLang'].forEach(id=>fillSelect(id,LANGUAGES));
+['addCondition','manualCondition'].forEach(id=>fillSelect(id,CONDITIONS));
+['addGrade','manualGrade'].forEach(id=>fillSelect(id,GRADES));
 
 auth.onAuthStateChanged(async user=>{
   const loginScreen=document.getElementById('loginScreen');
