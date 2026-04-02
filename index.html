@@ -2005,7 +2005,8 @@ async function recognizeCard(dataUrl){
       contents:[{parts:[
         {inlineData:{mimeType,data:base64}},
         {text:`Analysiere dieses Pokémon TCG Kartenbild. Antworte NUR mit einem JSON-Objekt (ohne Markdown, ohne Codeblock), mit exakt diesen Feldern:
-{"name":"Kartenname auf der Karte (exakt wie gedruckt)","nameEN":"englischer Kartenname","set":"Set-Name","setId":"Set-Code (z.B. sv2a, sm12a, SV-P)","number":"Kartennummer im Set","language":"Sprachkürzel: JP/EN/DE/FR/CN/CH","isSealed":false}
+{"name":"Cardmarket-Name der Karte auf Englisch (z.B. 'Pikachu Gold Star', 'Charizard ex', 'Umbreon VMAX')","set":"Set-Name wie auf Cardmarket","setId":"Set-Kürzel (z.B. sv2a, sm12a, SV-P, PCG-P, GBML)","number":"Kartennummer (z.B. 001/002, 287, TG30)","language":"Sprachkürzel: JP/EN/DE/FR/CN/CH","isSealed":false}
+WICHTIG: Verwende IMMER den englischen Cardmarket-Produktnamen, auch bei japanischen oder deutschen Karten. Beispiele: ピカチュウ☆ = "Pikachu Gold Star", リザードンex = "Charizard ex", ブラッキーVMAX = "Umbreon VMAX".
 Bei versiegelten Produkten (Booster Box, ETB, etc.): isSealed=true und name=Produktname.
 Wenn du etwas nicht erkennen kannst, setze den Wert auf "".`}
       ]}]
