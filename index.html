@@ -164,7 +164,8 @@ input{font-family:inherit}
 .trend-down{color:var(--red)}
 
 /* ─── Add Card Flow ─── */
-.api-results{max-height:60vh;overflow-y:auto}
+.api-results{max-height:60vh;overflow-y:auto;scrollbar-width:none}
+.api-results::-webkit-scrollbar{display:none}
 .api-card{display:flex;gap:12px;padding:12px;border:1px solid var(--border);border-radius:12px;
   margin-bottom:8px;cursor:pointer;transition:.15s}
 .api-card:active{background:var(--accent-press);border-color:var(--accent)}
@@ -196,7 +197,8 @@ input{font-family:inherit}
   backdrop-filter:blur(4px);align-items:flex-end;justify-content:center}
 .modal-overlay.open{display:flex}
 .modal{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:500px;
-  max-height:90vh;overflow-y:auto;padding:24px 20px calc(24px + var(--safe-b));animation:slideUp .25s}
+  max-height:90vh;overflow-y:auto;padding:24px 20px calc(24px + var(--safe-b));animation:slideUp .25s;scrollbar-width:none}
+.modal::-webkit-scrollbar{display:none}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
 .modal-handle{width:36px;height:4px;border-radius:4px;background:var(--border);margin:0 auto 16px}
 .modal-img{width:120px;height:168px;border-radius:10px;overflow:hidden;margin:0 auto 16px}
@@ -274,7 +276,8 @@ canvas{max-width:100%!important}
 .photo-preview .remove-photo{position:absolute;top:6px;right:6px;width:28px;height:28px;
   border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:flex;align-items:center;
   justify-content:center;font-size:16px;border:none;cursor:pointer}
-.modal-photos{display:flex;gap:10px;margin-bottom:16px;overflow-x:auto;padding:4px 0}
+.modal-photos{display:flex;gap:10px;margin-bottom:16px;overflow-x:auto;padding:4px 0;scrollbar-width:none}
+.modal-photos::-webkit-scrollbar{display:none}
 .modal-photos img{height:140px;border-radius:10px;object-fit:cover;flex-shrink:0}
 .modal-photo-actions{display:flex;gap:8px;margin-bottom:16px}
 .modal-photo-actions .btn{font-size:12px;padding:8px 14px}
@@ -623,6 +626,25 @@ canvas{max-width:100%!important}
   <div style="text-align:center;margin-top:12px;color:var(--text3);font-size:11px">
     Maurice.tcg v2.2 — Cloud-Sync &bull; Firebase<br>
     Preise: TCGdex / Cardmarket &bull; Kartendaten: TCGdex API
+  </div>
+</div>
+
+<!-- ═══ Price Editor Modal ═══ -->
+<div class="modal-overlay" id="priceModal" style="z-index:200" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-handle"></div>
+    <h3 style="font-size:16px;font-weight:800;text-align:center;margin-bottom:4px">Preis bearbeiten</h3>
+    <p style="text-align:center;color:var(--text2);font-size:12px;margin-bottom:16px" id="priceModalSub"></p>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px">
+      <input class="form-input" type="number" id="priceModalInput" step="0.01" placeholder="0.00"
+        style="width:140px;font-size:22px;font-weight:800;text-align:center;padding:12px 16px"
+        onkeydown="if(event.key==='Enter')savePriceModal()">
+      <span style="font-size:20px;font-weight:800;color:var(--text2)">€</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="savePriceModal()" style="flex:1">Speichern</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('priceModal').classList.remove('open')" style="flex:1">Abbrechen</button>
+    </div>
   </div>
 </div>
 
@@ -2351,38 +2373,34 @@ async function saveManualCard(){
 // ═══════════════════════════════════════════════
 // Edit Price in Modal
 // ═══════════════════════════════════════════════
+let priceEditCardId=null;
 function editPrice(cardId){
   const c=cards.find(x=>x.id===cardId);
   if(!c) return;
-  const cell=document.getElementById('modalPriceValue');
-  if(!cell) return;
-  const currentPrice=c.price||0;
-  cell.innerHTML=`<div style="display:flex;align-items:center;gap:6px">
-    <input type="number" id="editPriceInput" value="${currentPrice}" step="0.01"
-      style="width:80px;font-size:14px;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-weight:700"
-      onkeydown="if(event.key==='Enter')saveEditedPrice('${cardId}')">
-    <button onclick="saveEditedPrice('${cardId}')"
-      style="font-size:12px;padding:4px 10px;border-radius:8px;background:var(--accent);color:#000;font-weight:700;border:none;cursor:pointer">OK</button>
-  </div>`;
-  document.getElementById('editPriceInput').focus();
-  document.getElementById('editPriceInput').select();
+  priceEditCardId=cardId;
+  document.getElementById('priceModalSub').textContent=c.name;
+  const input=document.getElementById('priceModalInput');
+  input.value=c.price||'';
+  document.getElementById('priceModal').classList.add('open');
+  setTimeout(()=>{input.focus();input.select()},100);
 }
 
-async function saveEditedPrice(cardId){
-  const input=document.getElementById('editPriceInput');
-  if(!input) return;
+async function savePriceModal(){
+  if(!priceEditCardId) return;
+  const input=document.getElementById('priceModalInput');
   const newPrice=parseFloat(input.value);
   if(isNaN(newPrice)) return;
-  const c=cards.find(x=>x.id===cardId);
+  const c=cards.find(x=>x.id===priceEditCardId);
   if(!c) return;
   c.price=newPrice;
   if(!c.priceHistory) c.priceHistory=[];
   c.priceHistory.push({date:new Date().toISOString().slice(0,10), price:newPrice});
+  document.getElementById('priceModal').classList.remove('open');
   await updateCard(c);
   await loadCards();
   renderDashboard();
   renderCollection();
-  openModal(cardId);
+  openModal(priceEditCardId);
 }
 
 // ═══════════════════════════════════════════════
