@@ -958,13 +958,24 @@ document.getElementById('apiSearch').addEventListener('input',e=>{
 async function searchTCGdex(query){
   document.getElementById('apiResults').innerHTML='<div class="spinner"></div>';
   try{
-    if(query.includes('-')){
+    if(query.includes('-')&&!query.includes('(')){
       const results=await Promise.all(['de','en','ja'].map(l=>fetch(`${TCGDEX}/${l}/cards/${query}`)));
       for(const r of results){if(r.ok){renderApiResults([await r.json()]);return;}}
     }
-    const numMatch=query.match(/^(.+?)\s+(\d+)$/);
-    const nameQuery=numMatch?numMatch[1].trim():query;
-    const cardNum=numMatch?numMatch[2]:null;
+    // Parse CM format: "Pikachu Gold Star (GBML 001P)" or "Umbreon VMAX (EVS 215)"
+    const cmMatch=query.match(/^(.+?)\s*\(([A-Za-z0-9-]+)\s+([A-Za-z0-9/]+)\)$/);
+    const numMatch=!cmMatch&&query.match(/^(.+?)\s+(\d+)$/);
+    const nameQuery=cmMatch?cmMatch[1].trim():numMatch?numMatch[1].trim():query;
+    const cardNum=cmMatch?cmMatch[3]:numMatch?numMatch[2]:null;
+    const setCode=cmMatch?cmMatch[2]:null;
+    // Try direct set-number lookup for CM format
+    if(setCode&&cardNum){
+      const directId=setCode.toLowerCase()+'-'+cardNum.replace(/^0+/,'');
+      for(const lang of ['de','en','ja']){
+        try{const r=await fetch(`${TCGDEX}/${lang}/cards/${directId}`);
+        if(r.ok){renderApiResults([await r.json()]);return}}catch{}
+      }
+    }
 
     const altNames=getAltNames(nameQuery);
     const fetches=[];
