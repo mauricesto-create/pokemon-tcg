@@ -2062,6 +2062,8 @@ async function saveScanCard(){
   const d=scanCardData;
   const cond=document.getElementById('scanCondition').value.trim();
   const price=parseFloat(document.getElementById('scanPrice').value)||0;
+  let photo=null;
+  if(scanPhotoData) photo=await compressImage(scanPhotoData,600);
   const card={
     name:d.name+(d.number?' ('+((d.setId||'')+' '+d.number).trim()+')':''),
     setName:d.set||'',
@@ -2074,16 +2076,20 @@ async function saveScanCard(){
     price:price,
     image:d._tcgImage||'',
     tcgdexId:d._tcgdexId||'',
-    photos:scanPhotoData?[scanPhotoData]:[],
+    photos:photo?[photo]:[],
     priceHistory:[{date:new Date().toISOString().slice(0,10),price:price}],
     dateAdded:new Date().toISOString()
   };
-  await addCard(card);
-  await loadCards();
-  renderDashboard();
-  renderCollection();
-  resetScan();
-  document.getElementById('scanStatus').innerHTML='<p style="color:var(--green);font-weight:700">Karte gespeichert!</p>';
+  try{
+    await addCard(card);
+    await loadCards();
+    renderDashboard();
+    renderCollection();
+    resetScan();
+    document.getElementById('scanStatus').innerHTML='<p style="color:var(--green);font-weight:700">Karte gespeichert!</p>';
+  }catch(err){
+    document.getElementById('scanStatus').innerHTML=`<p style="color:var(--red)">Speichern fehlgeschlagen: ${err.message}</p>`;
+  }
 }
 
 function resetScan(){
