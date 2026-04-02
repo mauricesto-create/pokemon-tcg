@@ -380,11 +380,62 @@ canvas{max-width:100%!important}
   </div>
   <!-- Add Tabs -->
   <div style="display:flex;gap:0;margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid var(--border)">
-    <button class="btn" id="addTabApi" onclick="switchAddTab('api')" style="flex:1;border-radius:0;font-size:13px;font-weight:700">API-Suche</button>
-    <button class="btn btn-secondary" id="addTabManual" onclick="switchAddTab('manual')" style="flex:1;border-radius:0;font-size:13px;font-weight:700;border:none">Manuell anlegen</button>
+    <button class="btn" id="addTabScan" onclick="switchAddTab('scan')" style="flex:1;border-radius:0;font-size:13px;font-weight:700">📷 Scannen</button>
+    <button class="btn btn-secondary" id="addTabApi" onclick="switchAddTab('api')" style="flex:1;border-radius:0;font-size:13px;font-weight:700;border:none">API-Suche</button>
+    <button class="btn btn-secondary" id="addTabManual" onclick="switchAddTab('manual')" style="flex:1;border-radius:0;font-size:13px;font-weight:700;border:none">Manuell</button>
   </div>
-  <!-- Tab 1: API Search (existing flow) -->
-  <div id="addTabApiContent">
+  <!-- Tab 0: Scan -->
+  <div id="addTabScanContent">
+    <div style="text-align:center;padding:20px 0">
+      <div id="scanPreviewWrap" style="display:none;margin-bottom:16px">
+        <img id="scanPreviewImg" style="max-width:200px;border-radius:12px;border:2px solid var(--border)">
+      </div>
+      <button class="btn" onclick="startScan()" id="scanBtn" style="font-size:15px;padding:14px 32px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Karte fotografieren
+      </button>
+      <input type="file" id="scanCameraInput" accept="image/*" capture="environment" style="display:none">
+      <input type="file" id="scanGalleryInput" accept="image/*" style="display:none">
+      <div style="margin-top:8px">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('scanGalleryInput').click()" style="font-size:12px">oder aus Galerie wählen</button>
+      </div>
+      <p style="font-size:12px;color:var(--text2);margin-top:12px">Karte fotografieren — Gemini erkennt Name, Set und Sprache automatisch</p>
+      <div id="scanStatus" style="margin-top:16px"></div>
+    </div>
+    <!-- Scan Result Form -->
+    <div id="scanResultForm" style="display:none">
+      <div style="text-align:center;margin-bottom:16px">
+        <h3 id="scanCardName" style="font-size:16px;font-weight:800"></h3>
+        <p id="scanCardSet" style="font-size:12px;color:var(--text2)"></p>
+        <p id="scanCardLang" style="font-size:12px;color:var(--text2)"></p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kategorie</label>
+        <select class="form-select" id="scanCategory">
+          <option value="Binder">Binder</option>
+          <option value="Eevee Binder">Eevee Binder</option>
+          <option value="Random Binder">Random Binder</option>
+          <option value="Slabs">Slabs</option>
+          <option value="Sealed">Sealed</option>
+          <option value="Sealed Promos">Sealed Promos</option>
+          <option value="151 Master">151 Master JP</option>
+          <option value="Terastal Master">Terastal Master</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Zustand / Grade</label>
+        <input class="form-input" type="text" id="scanCondition" placeholder="z.B. NM, PSA 10...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Preis (€)</label>
+        <input class="form-input" type="number" id="scanPrice" step="0.01" placeholder="Preis eingeben">
+      </div>
+      <button class="btn" onclick="saveScanCard()">Zur Sammlung hinzufügen</button>
+      <button class="btn btn-secondary" onclick="resetScan()" style="margin-top:8px">Neue Karte scannen</button>
+    </div>
+  </div>
+  <!-- Tab 1: API Search -->
+  <div id="addTabApiContent" style="display:none">
   <!-- Step 1: Search -->
   <div id="addStep1">
     <div class="search-box">
@@ -1881,22 +1932,14 @@ async function saveCard(){
 // Add View: Tab Switching & Manual Card
 // ═══════════════════════════════════════════════
 function switchAddTab(tab){
-  const apiBtn=document.getElementById('addTabApi');
-  const manualBtn=document.getElementById('addTabManual');
-  const apiContent=document.getElementById('addTabApiContent');
-  const manualContent=document.getElementById('addTabManualContent');
-  if(tab==='api'){
-    apiBtn.className='btn';
-    manualBtn.className='btn btn-secondary';
-    manualBtn.style.border='none';
-    apiContent.style.display='';
-    manualContent.style.display='none';
-  } else {
-    manualBtn.className='btn';
-    manualBtn.style.border='';
-    apiBtn.className='btn btn-secondary';
-    apiContent.style.display='none';
-    manualContent.style.display='';
+  const tabs={scan:'addTabScan',api:'addTabApi',manual:'addTabManual'};
+  const contents={scan:'addTabScanContent',api:'addTabApiContent',manual:'addTabManualContent'};
+  for(const[k,id]of Object.entries(tabs)){
+    document.getElementById(id).className=k===tab?'btn':'btn btn-secondary';
+    document.getElementById(id).style.border=k===tab?'':'none';
+  }
+  for(const[k,id]of Object.entries(contents)){
+    document.getElementById(id).style.display=k===tab?'':'none';
   }
 }
 
@@ -1904,6 +1947,131 @@ function switchAddTab(tab){
 document.getElementById('manualCategory').addEventListener('change',e=>{
   document.getElementById('manualGradeGroup').style.display=e.target.value==='Slabs'?'block':'none';
 });
+
+// ═══════════════════════════════════════════════
+// Card Scanner - Gemini Vision
+// ═══════════════════════════════════════════════
+const GEMINI_KEY='AIzaSyDLeO9wTg4C2kWPDhNbJFqYjbrCrfKZQVA';
+let scanCardData=null;
+let scanPhotoData=null;
+
+function startScan(){document.getElementById('scanCameraInput').click()}
+
+document.getElementById('scanCameraInput').addEventListener('change',e=>handleScanFile(e.target.files[0]));
+document.getElementById('scanGalleryInput').addEventListener('change',e=>handleScanFile(e.target.files[0]));
+
+async function handleScanFile(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    const dataUrl=e.target.result;
+    scanPhotoData=dataUrl;
+    document.getElementById('scanPreviewImg').src=dataUrl;
+    document.getElementById('scanPreviewWrap').style.display='block';
+    document.getElementById('scanStatus').innerHTML='<div class="spinner"></div><p style="font-size:13px;color:var(--text2);margin-top:8px">Karte wird erkannt...</p>';
+    document.getElementById('scanBtn').disabled=true;
+    try{
+      await recognizeCard(dataUrl);
+    }catch(err){
+      document.getElementById('scanStatus').innerHTML=`<p style="color:var(--red)">Fehler: ${err.message}</p>`;
+    }
+    document.getElementById('scanBtn').disabled=false;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function recognizeCard(dataUrl){
+  const base64=dataUrl.split(',')[1];
+  const mimeType=dataUrl.split(';')[0].split(':')[1];
+  const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      contents:[{parts:[
+        {inlineData:{mimeType,data:base64}},
+        {text:`Analysiere dieses Pokémon TCG Kartenbild. Antworte NUR mit einem JSON-Objekt (ohne Markdown, ohne Codeblock), mit exakt diesen Feldern:
+{"name":"Kartenname auf der Karte (exakt wie gedruckt)","nameEN":"englischer Kartenname","set":"Set-Name","setId":"Set-Code (z.B. sv2a, sm12a, SV-P)","number":"Kartennummer im Set","language":"Sprachkürzel: JP/EN/DE/FR/CN/CH","isSealed":false}
+Bei versiegelten Produkten (Booster Box, ETB, etc.): isSealed=true und name=Produktname.
+Wenn du etwas nicht erkennen kannst, setze den Wert auf "".`}
+      ]}]
+    })
+  });
+  if(!resp.ok)throw new Error('Gemini API Fehler: '+resp.status);
+  const data=await resp.json();
+  const text=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
+  let parsed;
+  try{
+    const jsonStr=text.replace(/```json?\s*/g,'').replace(/```/g,'').trim();
+    parsed=JSON.parse(jsonStr);
+  }catch{throw new Error('Konnte Antwort nicht parsen: '+text.slice(0,200))}
+
+  scanCardData=parsed;
+  document.getElementById('scanStatus').innerHTML='<p style="color:var(--green);font-weight:700">Karte erkannt!</p>';
+  document.getElementById('scanCardName').textContent=parsed.name+(parsed.number?' #'+parsed.number:'');
+  document.getElementById('scanCardSet').textContent=(parsed.set||'')+(parsed.setId?' ('+parsed.setId+')':'');
+  document.getElementById('scanCardLang').textContent='Sprache: '+(parsed.language||'?');
+  document.getElementById('scanResultForm').style.display='block';
+
+  // Try to find image via TCGdex
+  if(parsed.setId&&parsed.number){
+    try{
+      const id=parsed.setId.toLowerCase()+'-'+parsed.number.replace(/^0+/,'');
+      for(const lang of ['de','en','ja']){
+        const r=await fetch(`${TCGDEX}/${lang}/cards/${id}`);
+        if(r.ok){const c=await r.json();if(c.image){scanCardData._tcgImage=c.image;scanCardData._tcgdexId=c.id}break}
+      }
+    }catch{}
+  }
+  if(!scanCardData._tcgImage&&parsed.nameEN){
+    try{
+      const r=await fetch(`${TCGDEX}/en/cards?name=${encodeURIComponent(parsed.nameEN)}`);
+      if(r.ok){const arr=await r.json();if(arr.length){
+        const match=parsed.number?arr.find(c=>c.id?.endsWith('-'+parsed.number)):arr[0];
+        if(match){const dr=await fetch(`${TCGDEX}/en/cards/${match.id}`);if(dr.ok){const c=await dr.json();if(c.image){scanCardData._tcgImage=c.image;scanCardData._tcgdexId=c.id}}}
+      }}
+    }catch{}
+  }
+}
+
+async function saveScanCard(){
+  if(!scanCardData)return;
+  const d=scanCardData;
+  const cond=document.getElementById('scanCondition').value.trim();
+  const price=parseFloat(document.getElementById('scanPrice').value)||0;
+  const card={
+    name:d.name+(d.number?' ('+((d.setId||'')+' '+d.number).trim()+')':''),
+    setName:d.set||'',
+    setId:d.setId||'',
+    localId:d.number||'',
+    language:d.language||'DE',
+    category:document.getElementById('scanCategory').value,
+    condition:/^(PSA|CGC|BGS|ACE)\s/i.test(cond)?'':cond,
+    grade:/^(PSA|CGC|BGS|ACE)\s/i.test(cond)?cond:'',
+    price:price,
+    image:d._tcgImage||'',
+    tcgdexId:d._tcgdexId||'',
+    photos:scanPhotoData?[scanPhotoData]:[],
+    priceHistory:[{date:new Date().toISOString().slice(0,10),price:price}],
+    dateAdded:new Date().toISOString()
+  };
+  await addCard(card);
+  await loadCards();
+  renderDashboard();
+  renderCollection();
+  resetScan();
+  document.getElementById('scanStatus').innerHTML='<p style="color:var(--green);font-weight:700">Karte gespeichert!</p>';
+}
+
+function resetScan(){
+  scanCardData=null;scanPhotoData=null;
+  document.getElementById('scanPreviewWrap').style.display='none';
+  document.getElementById('scanResultForm').style.display='none';
+  document.getElementById('scanStatus').innerHTML='';
+  document.getElementById('scanCondition').value='';
+  document.getElementById('scanPrice').value='';
+  document.getElementById('scanCameraInput').value='';
+  document.getElementById('scanGalleryInput').value='';
+}
 
 async function saveManualCard(){
   const name=document.getElementById('manualName').value.trim();
