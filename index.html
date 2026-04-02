@@ -2080,15 +2080,24 @@ async function saveScanCard(){
     priceHistory:[{date:new Date().toISOString().slice(0,10),price:price}],
     dateAdded:new Date().toISOString()
   };
+  const saveBtn=document.querySelector('#scanResultForm .btn');
+  saveBtn.disabled=true;saveBtn.textContent='Wird gespeichert...';
   try{
     await addCard(card);
     await loadCards();
     renderDashboard();
     renderCollection();
-    resetScan();
-    document.getElementById('scanStatus').innerHTML='<p style="color:var(--green);font-weight:700">Karte gespeichert!</p>';
+    scanCardData=null;scanPhotoData=null;
+    document.getElementById('scanResultForm').style.display='none';
+    document.getElementById('scanPreviewWrap').style.display='none';
+    document.getElementById('scanCondition').value='';
+    document.getElementById('scanPrice').value='';
+    document.getElementById('scanCameraInput').value='';
+    document.getElementById('scanGalleryInput').value='';
+    document.getElementById('scanStatus').innerHTML=`<div style="background:var(--green);color:#000;padding:16px;border-radius:12px;font-weight:700;font-size:15px;text-align:center">✓ ${card.name} gespeichert!</div>`;
   }catch(err){
     document.getElementById('scanStatus').innerHTML=`<p style="color:var(--red)">Speichern fehlgeschlagen: ${err.message}</p>`;
+    saveBtn.disabled=false;saveBtn.textContent='Zur Sammlung hinzufügen';
   }
 }
 
