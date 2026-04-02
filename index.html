@@ -956,7 +956,7 @@ function renderCollection(){
         <div class="badges">
           <span class="badge badge-lang">${c.language}</span>
           ${c.grade?`<span class="badge badge-grade">${c.grade}</span>`:''}
-          ${c.condition&&c.condition!=='Sealed'?`<span class="badge badge-cond">${c.condition}</span>`:''}
+          ${c.condition?`<span class="badge badge-cond">${c.condition}</span>`:''}
         </div>
       </div>
       <div class="card-price">
