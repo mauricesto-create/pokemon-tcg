@@ -538,6 +538,13 @@ canvas{max-width:100%!important}
   <div style="margin-bottom:16px">
     <h2 style="font-size:22px;font-weight:800">Einstellungen</h2>
   </div>
+  <div class="settings-item" onclick="promptGeminiKey()">
+    <div class="left">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="12" cy="15" r="2"/></svg>
+      <div><div class="label">Gemini API-Key</div><div class="desc" id="geminiKeyStatus">Für Karten-Scanner</div></div>
+    </div>
+    <div class="right">›</div>
+  </div>
   <div class="settings-item" onclick="document.getElementById('fileInput').click()">
     <div class="left">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -1885,11 +1892,28 @@ document.getElementById('manualCategory').addEventListener('change',e=>{
 // ═══════════════════════════════════════════════
 // Card Scanner - Gemini Vision
 // ═══════════════════════════════════════════════
-const GEMINI_KEY='AIzaSyDLeO9wTg4C2kWPDhNbJFqYjbrCrfKZQVA';
+let GEMINI_KEY='';
 let scanCardData=null;
 let scanPhotoData=null;
 
-function startScan(){document.getElementById('scanCameraInput').click()}
+function startScan(){
+  if(!GEMINI_KEY){promptGeminiKey();return}
+  document.getElementById('scanCameraInput').click();
+}
+
+async function promptGeminiKey(){
+  const key=prompt('Gemini API-Key eingeben (von aistudio.google.com/apikey):');
+  if(!key||!key.trim())return;
+  GEMINI_KEY=key.trim();
+  await db.collection('users').doc(uid).set({geminiKey:GEMINI_KEY},{merge:true});
+  showToast('API-Key gespeichert');
+}
+
+async function loadGeminiKey(){
+  try{const doc=await db.collection('users').doc(uid).get();
+  if(doc.exists&&doc.data().geminiKey){GEMINI_KEY=doc.data().geminiKey;
+    const s=document.getElementById('geminiKeyStatus');if(s)s.textContent='Key hinterlegt ✓'}}catch{}
+}
 
 document.getElementById('scanCameraInput').addEventListener('change',e=>handleScanFile(e.target.files[0]));
 document.getElementById('scanGalleryInput').addEventListener('change',e=>handleScanFile(e.target.files[0]));
@@ -2542,7 +2566,7 @@ auth.onAuthStateChanged(async user=>{
 
     // Start real-time sync
     startCardListener();
-    // Also do initial load for immediate render
+    loadGeminiKey();
     await loadCards();
     renderDashboard();
 
