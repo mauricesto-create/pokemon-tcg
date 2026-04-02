@@ -2660,7 +2660,10 @@ auth.onAuthStateChanged(async user=>{
     // Migrate old condition values
     const condMap={'EX':'EXC','Excellent':'EXC','Near Mint':'NM','Good':'GD','Light Played':'LP','Poor':'PO','Heavy Played':'HP','Damaged':'DMG','MP':'GD','HP':'LP','DMG':'PO'};
     const toFix=cards.filter(c=>c.condition&&condMap[c.condition]);
-    if(toFix.length){bulkMode=true;for(const c of toFix){c.condition=condMap[c.condition];await updateCard(c)}bulkMode=false;await loadCards()}
+    const sealedFix=cards.filter(c=>(c.category==='Sealed'||c.category==='Sealed Promos')&&!c.condition&&!c.grade);
+    sealedFix.forEach(c=>c.condition='Sealed');
+    const allFix=[...toFix,...sealedFix];
+    if(allFix.length){bulkMode=true;for(const c of toFix){c.condition=condMap[c.condition]};for(const c of allFix){await updateCard(c)}bulkMode=false;await loadCards()}
     renderDashboard();
 
     // Hide splash
