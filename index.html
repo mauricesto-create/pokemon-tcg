@@ -619,6 +619,21 @@ canvas{max-width:100%!important}
   </div>
 </div>
 
+<!-- ═══ Condition Editor Modal ═══ -->
+<div class="modal-overlay" id="condModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-handle"></div>
+    <h3 style="font-size:16px;font-weight:800;text-align:center;margin-bottom:4px" id="condModalTitle">Zustand wählen</h3>
+    <p style="text-align:center;color:var(--text2);font-size:12px;margin-bottom:16px" id="condModalSub"></p>
+    <div id="condModalOptions" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"></div>
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:16px">
+      <input class="form-input" type="text" id="condModalFree" placeholder="Oder frei eingeben..." style="flex:1" onkeydown="if(event.key==='Enter'&&this.value.trim())saveConditionVal(this.value.trim())">
+      <button class="btn btn-sm" onclick="if(document.getElementById('condModalFree').value.trim())saveConditionVal(document.getElementById('condModalFree').value.trim())" style="padding:8px 14px">OK</button>
+    </div>
+    <button class="btn btn-secondary" onclick="document.getElementById('condModal').classList.remove('open')" style="width:100%">Abbrechen</button>
+  </div>
+</div>
+
 <!-- ═══ Category Manager Modal ═══ -->
 <div class="modal-overlay" id="catModal" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal" style="max-width:400px">
@@ -2413,40 +2428,38 @@ async function deleteCustomCategory(idx){
   showToast('Kategorie gelöscht');
 }
 
+let condEditCardId=null;
 function editCondition(cardId){
   const c=cards.find(x=>x.id===cardId);
   if(!c) return;
-  const cell=document.getElementById('modalCondValue');
-  if(!cell) return;
+  condEditCardId=cardId;
   const current=c.grade||c.condition||'';
   const opts=getCondOptions(c.category);
-  const optHtml=opts.map(([v,t])=>`<option value="${v}"${current===v?' selected':''}>${t}</option>`).join('');
-  cell.innerHTML=`<div style="display:flex;align-items:center;gap:6px">
-    <select id="editCondSelect" style="font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-weight:700">
-      <option value="">–</option>${optHtml}
-    </select>
-    <input type="text" id="editCondInput" value="" placeholder="Oder frei..."
-      style="width:70px;font-size:12px;padding:4px 6px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)">
-    <button onclick="saveCondition('${cardId}')"
-      style="font-size:12px;padding:4px 10px;border-radius:8px;background:var(--accent);color:#000;font-weight:700;border:none;cursor:pointer">OK</button>
-  </div>`;
-  const sel=document.getElementById('editCondSelect');
-  if(!opts.find(([v])=>v===current)&&current){document.getElementById('editCondInput').value=current}
+  document.getElementById('condModalTitle').textContent=c.grade?'Grade wählen':'Zustand wählen';
+  document.getElementById('condModalSub').textContent=c.name;
+  document.getElementById('condModalFree').value='';
+  document.getElementById('condModalOptions').innerHTML=opts.map(([v])=>{
+    const active=v===current;
+    const style=v.startsWith('PSA')||v.startsWith('CGC')?gradeColor():condColor(v);
+    return `<button onclick="saveConditionVal('${v}')" style="padding:12px 16px;border-radius:12px;border:2px solid ${active?'var(--accent)':'var(--border)'};cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;gap:10px;transition:all .15s;background:var(--card);color:var(--text)">
+      <span style="display:inline-block;padding:3px 10px;border-radius:8px;font-size:13px;${style}">${v}</span>
+      ${active?'<span style="margin-left:auto;color:var(--accent);font-size:16px">✓</span>':''}
+    </button>`;
+  }).join('');
+  document.getElementById('condModal').classList.add('open');
 }
 
-async function saveCondition(cardId){
-  const sel=document.getElementById('editCondSelect');
-  const input=document.getElementById('editCondInput');
-  if(!sel&&!input) return;
-  const val=(input&&input.value.trim())?input.value.trim():(sel?sel.value:'');
-  const c=cards.find(x=>x.id===cardId);
+async function saveConditionVal(val){
+  if(!condEditCardId) return;
+  const c=cards.find(x=>x.id===condEditCardId);
   if(!c) return;
   if(/^(PSA|CGC|BGS|ACE)\s/i.test(val)){c.grade=val;c.condition=''}
   else{c.condition=val;c.grade=''}
+  document.getElementById('condModal').classList.remove('open');
   await updateCard(c);
   await loadCards();
   renderCollection();
-  openModal(cardId);
+  openModal(condEditCardId);
 }
 
 // ═══════════════════════════════════════════════
