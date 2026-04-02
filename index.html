@@ -893,12 +893,14 @@ function renderCollection(){
   const search=(document.getElementById('collSearch').value||'').toLowerCase();
   const cats=['Alle',...new Set(cards.map(c=>c.category))];
 
+  const noCondCount=cards.filter(c=>!c.condition&&!c.grade).length;
   document.getElementById('collChips').innerHTML=cats.map(c=>
     `<button class="chip${activeFilter===c?' active':''}" onclick="activeFilter='${c}';renderCollection()">${c}</button>`
-  ).join('');
+  ).join('')+(noCondCount?`<button class="chip${activeFilter==='_noCond'?' active':''}" style="border-color:var(--red);color:${activeFilter==='_noCond'?'#fff':'var(--red)'};background:${activeFilter==='_noCond'?'var(--red)':'transparent'}" onclick="activeFilter='_noCond';renderCollection()">Ohne Zustand (${noCondCount})</button>`:'');
 
   let filtered=cards;
-  if(activeFilter!=='Alle') filtered=filtered.filter(c=>c.category===activeFilter);
+  if(activeFilter==='_noCond') filtered=filtered.filter(c=>!c.condition&&!c.grade);
+  else if(activeFilter!=='Alle') filtered=filtered.filter(c=>c.category===activeFilter);
   if(search){const words=search.split(/\s+/).filter(Boolean);filtered=filtered.filter(c=>{const n=(c.name+'|'+(c.setName||'')+'|'+(c.setId||'')).toLowerCase();return words.every(w=>{const alts=getAltNames(w);return alts.some(a=>n.includes(a))})})}
   filtered.sort((a,b)=>(b.price||0)-(a.price||0));
   const rc=document.getElementById('collResultCount');
