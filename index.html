@@ -2094,7 +2094,8 @@ async function saveScanCard(){
     document.getElementById('scanPrice').value='';
     document.getElementById('scanCameraInput').value='';
     document.getElementById('scanGalleryInput').value='';
-    document.getElementById('scanStatus').innerHTML=`<div style="background:var(--green);color:#000;padding:16px;border-radius:12px;font-weight:700;font-size:15px;text-align:center">✓ ${card.name} gespeichert!</div>`;
+    document.getElementById('scanStatus').innerHTML='';
+    showToast(`✓ ${card.name} gespeichert`);
   }catch(err){
     document.getElementById('scanStatus').innerHTML=`<p style="color:var(--red)">Speichern fehlgeschlagen: ${err.message}</p>`;
     saveBtn.disabled=false;saveBtn.textContent='Zur Sammlung hinzufügen';
@@ -2266,17 +2267,30 @@ function openModal(id){
 
   document.getElementById('modalDeleteBtn').onclick=async()=>{
     if(confirm('Karte wirklich löschen?')){
+      const cardName=c.name;
       await deleteCard(c.id);
       await loadCards();
       closeModal();
       renderCollection();
       renderDashboard();
+      showToast(`✓ ${cardName} gelöscht`,'var(--red)');
     }
   };
   document.getElementById('cardModal').classList.add('open');
 }
 
 function closeModal(){document.getElementById('cardModal').classList.remove('open')}
+
+function showToast(msg,bg='var(--green)'){
+  const t=document.createElement('div');
+  t.textContent=msg;
+  Object.assign(t.style,{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',
+    background:bg,color:'#fff',padding:'20px 32px',borderRadius:'16px',fontSize:'16px',fontWeight:'700',
+    zIndex:'99999',textAlign:'center',boxShadow:'0 8px 32px rgba(0,0,0,.5)',opacity:'0',transition:'opacity .3s'});
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>t.style.opacity='1');
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300)},2000);
+}
 
 // ═══════════════════════════════════════════════
 // Excel Import
