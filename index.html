@@ -157,7 +157,7 @@ input{font-family:inherit}
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
 .badge-lang{background:var(--accent-light);color:var(--accent)}
 .badge-cond{background:rgba(52,211,153,.12);color:var(--green)}
-.badge-grade{background:rgba(52,211,153,.15);color:var(--green)}
+.badge-grade{background:rgba(255,255,255,.15);color:#fff}
 .card-price{text-align:right;display:flex;flex-direction:column;justify-content:center;flex-shrink:0}
 .card-price .val{font-size:15px;font-weight:800}
 .card-price .trend{font-size:10px;font-weight:600}
@@ -580,6 +580,13 @@ canvas{max-width:100%!important}
     </div>
     <div class="right">›</div>
   </div>
+  <div class="settings-item" onclick="openCategoryManager()">
+    <div class="left">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+      <div><div class="label">Kategorien verwalten</div><div class="desc">Neue Kategorie anlegen</div></div>
+    </div>
+    <div class="right">›</div>
+  </div>
   <div class="settings-item" onclick="clearAllData()">
     <div class="left">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--red)"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -607,8 +614,41 @@ canvas{max-width:100%!important}
     <a href="#" onclick="showLegal('datenschutz');return false" style="color:var(--text3);font-size:11px;text-decoration:underline">Datenschutzerklärung</a>
   </div>
   <div style="text-align:center;margin-top:12px;color:var(--text3);font-size:11px">
-    Maurice.tcg v2.0 — Cloud-Sync &bull; Firebase<br>
+    Maurice.tcg v2.2 — Cloud-Sync &bull; Firebase<br>
     Preise: TCGdex / Cardmarket &bull; Kartendaten: TCGdex API
+  </div>
+</div>
+
+<!-- ═══ Category Manager Modal ═══ -->
+<div class="modal-overlay" id="catModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-handle"></div>
+    <h3 style="font-size:16px;font-weight:800;margin-bottom:16px">Neue Kategorie</h3>
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input class="form-input" type="text" id="catName" placeholder="z.B. Mein Binder">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Icon wählen</label>
+      <div id="catIconGrid" style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:4px"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Farbe wählen</label>
+      <div id="catColorGrid" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Zustandstyp</label>
+      <select class="form-select" id="catCondType">
+        <option value="card">Karten (NM/EXC/GD/LP/PO)</option>
+        <option value="slab">Slabs (PSA/CGC)</option>
+        <option value="sealed">Sealed</option>
+      </select>
+    </div>
+    <div style="margin-top:12px;margin-bottom:16px" id="catCustomList"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="saveNewCategory()" style="flex:1">Erstellen</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('catModal').classList.remove('open')" style="flex:1">Abbrechen</button>
+    </div>
   </div>
 </div>
 
@@ -738,8 +778,10 @@ const CAT_COLORS = {'Slabs':'#8b5cf6','Binder':'#3b82f6','Sealed':'#10b981','Ran
 const LANG_COLORS = {JP:'#ef4444',DE:'#3b82f6',EN:'#10b981',FR:'#f59e0b',CN:'#8b5cf6',CH:'#a855f7'};
 const CAT_ICONS={'Slabs':'🏅','Binder':'📒','Sealed':'🎴','Random Binder':'🃏',
   'Eevee Binder':'🌙','151 Master':'🔴','Terastal Master':'💎','Sealed Promos':'⭐'};
+const ICON_CHOICES=['📒','📕','📗','📘','📙','🗂️','🏅','🎴','🃏','⭐','💎','🔴','🌙','🔥','⚡','💧','🌿','🐉','👑','🎯','🏆','💰','📦','🎁','🎪','🧊','💫','🌈','🖤','❤️'];
+const DEFAULT_COLORS=['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#6366f1','#f97316','#94a3b8'];
 const TCGDEX='https://api.tcgdex.net/v2';
-const CATEGORIES=[['Binder','Binder'],['Eevee Binder','Eevee Binder'],['Random Binder','Random Binder'],['Slabs','Slabs'],['Sealed','Sealed'],['Sealed Promos','Sealed Promos'],['151 Master','151 Master JP'],['Terastal Master','Terastal Master']];
+let CATEGORIES=[['Binder','Binder'],['Eevee Binder','Eevee Binder'],['Random Binder','Random Binder'],['Slabs','Slabs'],['Sealed','Sealed'],['Sealed Promos','Sealed Promos'],['151 Master','151 Master JP'],['Terastal Master','Terastal Master']];
 const LANGUAGES=[['JP','Japanisch (JP)'],['DE','Deutsch (DE)'],['EN','Englisch (EN)'],['FR','Französisch (FR)'],['CN','Chinesisch (CN)'],['CH','Chinesisch Trad. (CH)']];
 const CONDITIONS=[['NM','Near Mint (NM)'],['EXC','Excellent (EXC)'],['GD','Good (GD)'],['LP','Light Played (LP)'],['PO','Poor (PO)'],['Sealed','Sealed']];
 const GRADES=[['','Kein Grade'],['PSA 10','PSA 10'],['PSA 9','PSA 9'],['PSA 8','PSA 8'],['PSA 7','PSA 7'],['CGC Pristine 10','CGC Pristine 10'],['CGC 9.5','CGC 9.5'],['CGC 9','CGC 9'],['ACE 10','ACE 10']];
@@ -747,6 +789,16 @@ function fillSelect(id,opts){const el=document.getElementById(id);if(!el)return;
 const PKM_NAMES={flamara:'flareon',aquana:'vaporeon',blitza:'jolteon',psiana:'espeon',nachtara:'umbreon',folipurba:'leafeon',glaziola:'glaceon',feelinara:'sylveon',evoli:'eevee',glurak:'charizard',bisaflor:'venusaur',turtok:'blastoise',pikachu:'pikachu',mewtu:'mewtwo',mew:'mew',relaxo:'snorlax',gengar:'gengar',dragoran:'dragonite',arktos:'articuno',zapdos:'zapdos',lavados:'moltres',lugia:'lugia',ho:'ho-oh',celebi:'celebi',rayquaza:'rayquaza',dialga:'dialga',palkia:'palkia',giratina:'giratina',arceus:'arceus',reshiram:'reshiram',zekrom:'zekrom',xerneas:'xerneas',yveltal:'yveltal',solgaleo:'solgaleo',lunala:'lunala',zacian:'zacian',zamazenta:'zamazenta',miraidon:'miraidon',koraidon:'koraidon',bisasam:'bulbasaur',bisaknosp:'ivysaur',glumanda:'charmander',glutexo:'charmeleon',schiggy:'squirtle',schillok:'wartortle',raichu:'raichu',pummeluff:'jigglypuff',vulpix:'vulpix',vulnona:'ninetales',knuddeluff:'wigglytuff',simsala:'alakazam',machomei:'machamp',quappo:'poliwrath',nebulak:'gastly',alpollo:'haunter',onix:'onix',rizeros:'rhydon',chaneira:'chansey',kangama:'kangaskhan',pantimos:'mr. mime',lapras:'lapras',ditto:'ditto',porygon:'porygon',aerodactyl:'aerodactyl',garados:'gyarados',kokowei:'exeggutor',rossana:'jynx',elektek:'electabuzz',magmar:'magmar',pinsir:'pinsir',tauros:'tauros',endivie:'chikorita',feurigel:'cyndaquil',karnimani:'totodile',noctuh:'noctowl',ampharos:'ampharos',marill:'marill',quaxo:'politoed',sonnfel:'sunflora',despotar:'tyranitar',geckarbor:'treecko',flemmli:'torchic',hydropi:'mudkip',kapilz:'breloom',letarking:'slaking',guardevoir:'gardevoir',brutalanda:'salamence',metagross:'metagross',kyogre:'kyogre',groudon:'groudon',chelast:'turtwig',panflam:'chimchar',plinfa:'piplup',lucario:'lucario',knakrack:'garchomp',cresselia:'cresselia',darkrai:'darkrai',shaymin:'shaymin',ottaro:'oshawott',serpifeu:'snivy',floink:'tepig',zoroark:'zoroark',kyurem:'kyurem',igamaro:'chespin',fynx:'fennekin',froxy:'froakie',quajutsu:'greninja',bauz:'rowlet',flamiau:'litten',robball:'popplio',wolwerock:'lycanroc',katagami:'kartana',chimpep:'grookey',hopplo:'scorbunny',memmeon:'sobble',duraludon:'duraludon',zarude:'zarude',felori:'sprigatito',krokel:'fuecoco',kwaks:'quaxly',gierspenst:'gholdengo',miraidon:'miraidon',koraidon:'koraidon',lechonk:'lechonk',fidough:'fidough'};
 const PKM_NAMES_REV=Object.fromEntries(Object.entries(PKM_NAMES).map(([d,e])=>[e,d]));
 function getAltNames(q){const lo=q.toLowerCase();const alts=new Set();alts.add(lo);if(PKM_NAMES[lo])alts.add(PKM_NAMES[lo]);if(PKM_NAMES_REV[lo])alts.add(PKM_NAMES_REV[lo]);for(const[d,e]of Object.entries(PKM_NAMES)){if(d.startsWith(lo)||e.startsWith(lo)){alts.add(d);alts.add(e)}}return[...alts]}
+function condColor(val){
+  if(!val)return '';
+  if(val==='NM')return 'background:rgba(16,185,129,.15);color:#10b981';
+  if(val==='EXC')return 'background:rgba(249,115,22,.15);color:#f97316';
+  if(val==='GD')return 'background:rgba(234,179,8,.15);color:#eab308';
+  if(val==='LP'||val==='PO')return 'background:rgba(239,68,68,.15);color:#ef4444';
+  if(val==='Sealed')return 'background:rgba(16,185,129,.12);color:#10b981';
+  return 'background:rgba(52,211,153,.12);color:var(--green)';
+}
+function gradeColor(){return 'background:rgba(255,255,255,.15);color:#fff'}
 function dedupeById(arr){const s=new Set();return arr.filter(c=>s.has(c.id)?false:!!s.add(c.id))}
 function imgSrc(url){return url?(url.startsWith('data:')||url.endsWith('.png')||url.endsWith('.jpg')||url.endsWith('.webp')||url.includes('pricecharting.com')?url:url+'/low.webp'):''}
 
@@ -883,7 +935,7 @@ function renderDashboard(){
         <div class="name">${c.name}</div>
         <div class="set">${c.setName||c.setId||''}</div>
         <div class="badges">
-          ${c.grade?`<span class="badge badge-grade">${c.grade}</span>`:''}
+          ${c.grade?`<span class="badge" style="${gradeColor()}">${c.grade}</span>`:''}
           <span class="badge badge-lang">${c.language}</span>
         </div>
       </div>
@@ -955,8 +1007,8 @@ function renderCollection(){
         <div class="set">${c.setName||c.setId||c.category}</div>
         <div class="badges">
           <span class="badge badge-lang">${c.language}</span>
-          ${c.grade?`<span class="badge badge-grade">${c.grade}</span>`:''}
-          ${c.condition?`<span class="badge badge-cond">${c.condition}</span>`:''}
+          ${c.grade?`<span class="badge" style="${gradeColor()}">${c.grade}</span>`:''}
+          ${c.condition?`<span class="badge" style="${condColor(c.condition)}">${c.condition}</span>`:''}
         </div>
       </div>
       <div class="card-price">
@@ -2253,27 +2305,140 @@ function closeBatch(){
   if(batchDone>0){loadCards().then(()=>{renderCollection();renderDashboard()})}
 }
 
+function getCondOptions(category){
+  if(category==='Slabs') return [['PSA 10','PSA 10'],['PSA 9','PSA 9'],['PSA 8','PSA 8'],['CGC Pristine 10','CGC Pristine 10']];
+  if(category==='Sealed'||category==='Sealed Promos') return [['Sealed','Sealed']];
+  // Check custom category condType
+  const custom=customCategories.find(c=>c.name===category);
+  if(custom){
+    if(custom.condType==='slab') return [['PSA 10','PSA 10'],['PSA 9','PSA 9'],['PSA 8','PSA 8'],['CGC Pristine 10','CGC Pristine 10']];
+    if(custom.condType==='sealed') return [['Sealed','Sealed']];
+  }
+  return [['NM','NM'],['EXC','EXC'],['GD','GD'],['LP','LP'],['PO','PO']];
+}
+
+// ═══════════════════════════════════════════════
+// Category Manager
+// ═══════════════════════════════════════════════
+let customCategories=[];
+let selectedCatIcon='📒';
+let selectedCatColor='#3b82f6';
+
+async function loadCustomCategories(){
+  try{
+    const doc=await db.collection('users').doc(uid).get();
+    if(doc.exists&&doc.data().customCategories){
+      customCategories=doc.data().customCategories;
+      customCategories.forEach(c=>{
+        CAT_ICONS[c.name]=c.icon;
+        CAT_COLORS[c.name]=c.color;
+        if(!CATEGORIES.find(([v])=>v===c.name)) CATEGORIES.push([c.name,c.name]);
+      });
+      refreshCategorySelects();
+    }
+  }catch{}
+}
+
+function refreshCategorySelects(){
+  ['scanCategory','addCategory','manualCategory'].forEach(id=>fillSelect(id,CATEGORIES));
+}
+
+function openCategoryManager(){
+  selectedCatIcon='📒';selectedCatColor='#3b82f6';
+  document.getElementById('catName').value='';
+  // Icon grid
+  document.getElementById('catIconGrid').innerHTML=ICON_CHOICES.map(ic=>
+    `<div onclick="pickCatIcon(this,'${ic}')" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:18px;border-radius:8px;cursor:pointer;border:2px solid ${ic==='📒'?'var(--accent)':'transparent'};background:var(--bg)" class="cat-icon-pick">${ic}</div>`
+  ).join('');
+  // Color grid
+  document.getElementById('catColorGrid').innerHTML=DEFAULT_COLORS.map(col=>
+    `<div onclick="pickCatColor(this,'${col}')" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:${col};border:3px solid ${col==='#3b82f6'?'var(--text)':'transparent'}" class="cat-color-pick"></div>`
+  ).join('');
+  // Custom categories list
+  renderCustomCatList();
+  document.getElementById('catModal').classList.add('open');
+}
+
+function pickCatIcon(el,icon){
+  selectedCatIcon=icon;
+  document.querySelectorAll('.cat-icon-pick').forEach(e=>e.style.border='2px solid transparent');
+  el.style.border='2px solid var(--accent)';
+}
+function pickCatColor(el,color){
+  selectedCatColor=color;
+  document.querySelectorAll('.cat-color-pick').forEach(e=>e.style.border='3px solid transparent');
+  el.style.border='3px solid var(--text)';
+}
+
+function renderCustomCatList(){
+  const el=document.getElementById('catCustomList');
+  if(!customCategories.length){el.innerHTML='';return}
+  el.innerHTML='<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">Eigene Kategorien:</div>'+
+    customCategories.map((c,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:18px">${c.icon}</span>
+      <span style="flex:1;font-size:13px;font-weight:600">${c.name}</span>
+      <span style="font-size:11px;color:var(--text3)">${c.condType}</span>
+      <button onclick="deleteCustomCategory(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:2px 6px">✕</button>
+    </div>`).join('');
+}
+
+async function saveNewCategory(){
+  const name=document.getElementById('catName').value.trim();
+  if(!name){showToast('Bitte Name eingeben','var(--red)');return}
+  if(CATEGORIES.find(([v])=>v===name)){showToast('Kategorie existiert bereits','var(--red)');return}
+  const condType=document.getElementById('catCondType').value;
+  const cat={name,icon:selectedCatIcon,color:selectedCatColor,condType};
+  customCategories.push(cat);
+  CAT_ICONS[name]=selectedCatIcon;
+  CAT_COLORS[name]=selectedCatColor;
+  CATEGORIES.push([name,name]);
+  await db.collection('users').doc(uid).set({customCategories},{merge:true});
+  refreshCategorySelects();
+  renderCustomCatList();
+  document.getElementById('catName').value='';
+  showToast('Kategorie "'+name+'" erstellt');
+}
+
+async function deleteCustomCategory(idx){
+  const cat=customCategories[idx];
+  const inUse=cards.some(c=>c.category===cat.name);
+  if(inUse){showToast('Kategorie wird noch verwendet!','var(--red)');return}
+  delete CAT_ICONS[cat.name];
+  delete CAT_COLORS[cat.name];
+  CATEGORIES=CATEGORIES.filter(([v])=>v!==cat.name);
+  customCategories.splice(idx,1);
+  await db.collection('users').doc(uid).set({customCategories},{merge:true});
+  refreshCategorySelects();
+  renderCustomCatList();
+  showToast('Kategorie gelöscht');
+}
+
 function editCondition(cardId){
   const c=cards.find(x=>x.id===cardId);
   if(!c) return;
   const cell=document.getElementById('modalCondValue');
   if(!cell) return;
   const current=c.grade||c.condition||'';
+  const opts=getCondOptions(c.category);
+  const optHtml=opts.map(([v,t])=>`<option value="${v}"${current===v?' selected':''}>${t}</option>`).join('');
   cell.innerHTML=`<div style="display:flex;align-items:center;gap:6px">
-    <input type="text" id="editCondInput" value="${current}" placeholder="z.B. NM, PSA 10..."
-      style="width:120px;font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-weight:700"
-      onkeydown="if(event.key==='Enter')saveCondition('${cardId}')">
+    <select id="editCondSelect" style="font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-weight:700">
+      <option value="">–</option>${optHtml}
+    </select>
+    <input type="text" id="editCondInput" value="" placeholder="Oder frei..."
+      style="width:70px;font-size:12px;padding:4px 6px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)">
     <button onclick="saveCondition('${cardId}')"
       style="font-size:12px;padding:4px 10px;border-radius:8px;background:var(--accent);color:#000;font-weight:700;border:none;cursor:pointer">OK</button>
   </div>`;
-  document.getElementById('editCondInput').focus();
-  document.getElementById('editCondInput').select();
+  const sel=document.getElementById('editCondSelect');
+  if(!opts.find(([v])=>v===current)&&current){document.getElementById('editCondInput').value=current}
 }
 
 async function saveCondition(cardId){
+  const sel=document.getElementById('editCondSelect');
   const input=document.getElementById('editCondInput');
-  if(!input) return;
-  const val=input.value.trim();
+  if(!sel&&!input) return;
+  const val=(input&&input.value.trim())?input.value.trim():(sel?sel.value:'');
   const c=cards.find(x=>x.id===cardId);
   if(!c) return;
   if(/^(PSA|CGC|BGS|ACE)\s/i.test(val)){c.grade=val;c.condition=''}
@@ -2299,7 +2464,7 @@ function openModal(id){
   document.getElementById('modalGrid').innerHTML=`
     <div class="detail-cell" style="cursor:pointer" onclick="editPrice('${c.id}')"><div class="label">Wert ✏️</div><div class="value" style="color:var(--accent)" id="modalPriceValue">${fmtE(c.price||0)}</div></div>
     <div class="detail-cell"><div class="label">Sprache</div><div class="value">${c.language||'–'}</div></div>
-    <div class="detail-cell" style="cursor:pointer" onclick="editCondition('${c.id}')"><div class="label">${c.grade?'Grade':'Zustand'} ✏️</div><div class="value" id="modalCondValue">${c.grade||c.condition||'–'}</div></div>
+    <div class="detail-cell" style="cursor:pointer" onclick="editCondition('${c.id}')"><div class="label">${c.grade?'Grade':'Zustand'} ✏️</div><div class="value" id="modalCondValue"><span style="padding:2px 8px;border-radius:6px;font-weight:700;${c.grade?gradeColor():condColor(c.condition)}">${c.grade||c.condition||'–'}</span></div></div>
     <div class="detail-cell"><div class="label">Hinzugefügt</div><div class="value" style="font-size:12px">${c.dateAdded?new Date(c.dateAdded).toLocaleDateString('de-DE'):'–'}</div></div>
   `;
 
@@ -2656,13 +2821,17 @@ auth.onAuthStateChanged(async user=>{
     // Start real-time sync
     startCardListener();
     loadGeminiKey();
+    loadCustomCategories();
     await loadCards();
     // Migrate old condition values
     const condMap={'EX':'EXC','Excellent':'EXC','Near Mint':'NM','Good':'GD','Light Played':'LP','Poor':'PO','Heavy Played':'HP','Damaged':'DMG','MP':'GD','HP':'LP','DMG':'PO'};
     const toFix=cards.filter(c=>c.condition&&condMap[c.condition]);
     const sealedFix=cards.filter(c=>(c.category==='Sealed'||c.category==='Sealed Promos')&&!c.condition&&!c.grade);
     sealedFix.forEach(c=>c.condition='Sealed');
-    const allFix=[...toFix,...sealedFix];
+    // Set 151 Master + Terastal Master without condition to NM
+    const masterFix=cards.filter(c=>(c.category==='151 Master'||c.category==='Terastal Master')&&!c.condition&&!c.grade);
+    masterFix.forEach(c=>c.condition='NM');
+    const allFix=[...toFix,...sealedFix,...masterFix];
     if(allFix.length){bulkMode=true;for(const c of toFix){c.condition=condMap[c.condition]};for(const c of allFix){await updateCard(c)}bulkMode=false;await loadCards()}
     renderDashboard();
 
