@@ -858,8 +858,8 @@ function condColor(val){
   if(val==='Sealed')return 'background:rgba(16,185,129,.12);color:#10b981';
   return 'background:rgba(52,211,153,.12);color:var(--green)';
 }
-const LANG_FLAGS={JP:'🇯🇵',DE:'🇩🇪',EN:'🇬🇧',FR:'🇫🇷',CN:'🇨🇳'};
-function langFlag(code){return LANG_FLAGS[code]||code}
+const LANG_FLAG_CODES={JP:'1f1ef-1f1f5',DE:'1f1e9-1f1ea',EN:'1f1ec-1f1e7',FR:'1f1eb-1f1f7',CN:'1f1e8-1f1f3'};
+function langFlag(code,size=16){const f=LANG_FLAG_CODES[code];if(!f)return code;return `<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${f}.png" alt="${code}" style="width:${size}px;height:${size}px;vertical-align:middle">`}
 function dedupeById(arr){const s=new Set();return arr.filter(c=>s.has(c.id)?false:!!s.add(c.id))}
 function imgSrc(url){return url?(url.startsWith('data:')||url.endsWith('.png')||url.endsWith('.jpg')||url.endsWith('.webp')||url.includes('pricecharting.com')?url:url+'/low.webp'):''}
 
@@ -2614,7 +2614,7 @@ function openModal(id){
 
   document.getElementById('modalGrid').innerHTML=`
     <div class="detail-cell" style="cursor:pointer" onclick="editPrice('${c.id}')"><div class="label">Wert ✏️</div><div class="value" style="color:var(--accent)" id="modalPriceValue">${fmtE(c.price||0)}</div></div>
-    <div class="detail-cell"><div class="label">Sprache</div><div class="value" style="font-size:24px">${langFlag(c.language)}</div></div>
+    <div class="detail-cell"><div class="label">Sprache</div><div class="value">${langFlag(c.language,28)}</div></div>
     <div class="detail-cell" style="cursor:pointer" onclick="editCondition('${c.id}')"><div class="label">Zustand ✏️</div><div class="value" id="modalCondValue"><span style="padding:2px 8px;border-radius:6px;font-weight:700;${condColor(c.condition)}">${c.condition||'–'}</span></div></div>
     <div class="detail-cell"><div class="label">Hinzugefügt</div><div class="value" style="font-size:12px">${c.dateAdded?new Date(c.dateAdded).toLocaleDateString('de-DE'):'–'}</div></div>
   `;
