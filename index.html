@@ -1960,6 +1960,20 @@ function startScan(){document.getElementById('scanCameraInput').click()}
 document.getElementById('scanCameraInput').addEventListener('change',e=>handleScanFile(e.target.files[0]));
 document.getElementById('scanGalleryInput').addEventListener('change',e=>handleScanFile(e.target.files[0]));
 
+function compressImage(dataUrl,maxW=800){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas');
+      const scale=Math.min(1,maxW/img.width);
+      c.width=img.width*scale;c.height=img.height*scale;
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      resolve(c.toDataURL('image/jpeg',0.7));
+    };
+    img.src=dataUrl;
+  });
+}
+
 async function handleScanFile(file){
   if(!file)return;
   const reader=new FileReader();
@@ -1971,7 +1985,8 @@ async function handleScanFile(file){
     document.getElementById('scanStatus').innerHTML='<div class="spinner"></div><p style="font-size:13px;color:var(--text2);margin-top:8px">Karte wird erkannt...</p>';
     document.getElementById('scanBtn').disabled=true;
     try{
-      await recognizeCard(dataUrl);
+      const compressed=await compressImage(dataUrl);
+      await recognizeCard(compressed);
     }catch(err){
       document.getElementById('scanStatus').innerHTML=`<p style="color:var(--red)">Fehler: ${err.message}</p>`;
     }
