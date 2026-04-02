@@ -621,6 +621,37 @@ canvas{max-width:100%!important}
   </div>
 </div>
 
+<!-- ═══ Batch Condition Modal ═══ -->
+<div class="modal-overlay" id="batchModal" onclick="if(event.target===this)closeBatch()">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="font-size:16px;font-weight:800">Zustand eintragen</h3>
+      <span id="batchProgress" style="font-size:13px;color:var(--text2)"></span>
+    </div>
+    <div style="text-align:center;margin-bottom:16px">
+      <div id="batchCardImage" style="height:140px;margin-bottom:8px"></div>
+      <h3 id="batchCardName" style="font-size:15px;font-weight:700"></h3>
+      <p id="batchCardInfo" style="font-size:12px;color:var(--text2)"></p>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:12px">
+      <button class="btn btn-secondary btn-sm" onclick="setBatchCondition('NM')" style="font-size:13px;min-width:50px">NM</button>
+      <button class="btn btn-secondary btn-sm" onclick="setBatchCondition('LP')" style="font-size:13px;min-width:50px">LP</button>
+      <button class="btn btn-secondary btn-sm" onclick="setBatchCondition('MP')" style="font-size:13px;min-width:50px">MP</button>
+      <button class="btn btn-secondary btn-sm" onclick="setBatchCondition('HP')" style="font-size:13px;min-width:50px">HP</button>
+      <button class="btn btn-secondary btn-sm" onclick="setBatchCondition('DMG')" style="font-size:13px;min-width:50px">DMG</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:16px">
+      <input class="form-input" type="text" id="batchCustomCond" placeholder="Oder frei eingeben..." style="flex:1" onkeydown="if(event.key==='Enter'&&this.value.trim())setBatchCondition(this.value.trim())">
+      <button class="btn btn-sm" onclick="if(document.getElementById('batchCustomCond').value.trim())setBatchCondition(document.getElementById('batchCustomCond').value.trim())" style="padding:8px 14px">OK</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="skipBatchCard()" style="flex:1">Überspringen</button>
+      <button class="btn btn-secondary" onclick="closeBatch()" style="flex:1">Beenden</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ Detail Modal ═══ -->
 <div class="modal-overlay" id="cardModal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
@@ -896,7 +927,7 @@ function renderCollection(){
   const noCondCount=cards.filter(c=>!c.condition&&!c.grade).length;
   document.getElementById('collChips').innerHTML=cats.map(c=>
     `<button class="chip${activeFilter===c?' active':''}" onclick="activeFilter='${c}';renderCollection()">${c}</button>`
-  ).join('')+(noCondCount?`<button class="chip${activeFilter==='_noCond'?' active':''}" style="border-color:var(--red);color:${activeFilter==='_noCond'?'#fff':'var(--red)'};background:${activeFilter==='_noCond'?'var(--red)':'transparent'}" onclick="activeFilter='_noCond';renderCollection()">Ohne Zustand (${noCondCount})</button>`:'');
+  ).join('')+(noCondCount?`<button class="chip${activeFilter==='_noCond'?' active':''}" style="border-color:var(--red);color:${activeFilter==='_noCond'?'#fff':'var(--red)'};background:${activeFilter==='_noCond'?'var(--red)':'transparent'}" onclick="activeFilter='_noCond';renderCollection()">Ohne Zustand (${noCondCount})</button><button class="chip" style="border-color:var(--accent);color:var(--accent)" onclick="startBatch()">⚡ Stapel</button>`:'');
 
   let filtered=cards;
   if(activeFilter==='_noCond') filtered=filtered.filter(c=>!c.condition&&!c.grade);
@@ -2175,6 +2206,51 @@ async function saveEditedPrice(cardId){
   renderDashboard();
   renderCollection();
   openModal(cardId);
+}
+
+// ═══════════════════════════════════════════════
+// Batch Condition Mode
+// ═══════════════════════════════════════════════
+let batchCards=[];
+let batchIndex=0;
+let batchDone=0;
+
+function startBatch(){
+  batchCards=cards.filter(c=>!c.condition&&!c.grade);
+  if(!batchCards.length){showToast('Alle Karten haben einen Zustand');return}
+  batchIndex=0;batchDone=0;
+  document.getElementById('batchModal').classList.add('open');
+  showBatchCard();
+}
+
+function showBatchCard(){
+  if(batchIndex>=batchCards.length){closeBatch();showToast(`${batchDone} Karten aktualisiert`);return}
+  const c=batchCards[batchIndex];
+  document.getElementById('batchProgress').textContent=`${batchIndex+1} / ${batchCards.length}`;
+  document.getElementById('batchCardName').textContent=c.name;
+  document.getElementById('batchCardInfo').textContent=(c.setName||c.category)+' • '+(c.language||'');
+  const imgEl=document.getElementById('batchCardImage');
+  if(c.photos&&c.photos.length) imgEl.innerHTML=`<img src="${c.photos[0]}" style="height:140px;border-radius:10px">`;
+  else if(c.image) imgEl.innerHTML=`<img src="${imgSrc(c.image)}" style="height:140px;border-radius:10px" onerror="this.style.display='none'">`;
+  else imgEl.innerHTML='<div style="height:140px;display:flex;align-items:center;justify-content:center;font-size:48px">🃏</div>';
+  document.getElementById('batchCustomCond').value='';
+}
+
+async function setBatchCondition(val){
+  const c=batchCards[batchIndex];
+  if(/^(PSA|CGC|BGS|ACE)\s/i.test(val)){c.grade=val;c.condition=''}
+  else{c.condition=val;c.grade=''}
+  await updateCard(c);
+  batchDone++;
+  batchIndex++;
+  showBatchCard();
+}
+
+function skipBatchCard(){batchIndex++;showBatchCard()}
+
+function closeBatch(){
+  document.getElementById('batchModal').classList.remove('open');
+  if(batchDone>0){loadCards().then(()=>{renderCollection();renderDashboard()})}
 }
 
 function editCondition(cardId){
