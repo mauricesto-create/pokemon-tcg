@@ -2011,12 +2011,15 @@ Wenn du etwas nicht erkennen kannst, setze den Wert auf "".`}
       ]}]
     })
   });
-  if(resp.status===429){
-    document.getElementById('scanStatus').innerHTML='<div class="spinner"></div><p style="font-size:13px;color:var(--text2);margin-top:8px">Rate Limit — warte 5 Sekunden...</p>';
-    await new Promise(r=>setTimeout(r,5000));
-    return recognizeCard(dataUrl);
+  if(!resp.ok){
+    const errBody=await resp.text();
+    if(resp.status===429){
+      document.getElementById('scanStatus').innerHTML='<div class="spinner"></div><p style="font-size:13px;color:var(--text2);margin-top:8px">Rate Limit — warte 10 Sekunden...</p>';
+      await new Promise(r=>setTimeout(r,10000));
+      return recognizeCard(dataUrl);
+    }
+    throw new Error(`API ${resp.status}: ${errBody.slice(0,200)}`);
   }
-  if(!resp.ok)throw new Error('Gemini API Fehler: '+resp.status);
   const data=await resp.json();
   const text=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
   let parsed;
