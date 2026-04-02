@@ -405,6 +405,10 @@ canvas{max-width:100%!important}
     <!-- Scan Result Form -->
     <div id="scanResultForm" style="display:none">
       <div style="text-align:center;margin-bottom:16px">
+        <div id="scanMatchedImage" style="display:none;margin-bottom:12px">
+          <img id="scanMatchedImg" style="height:160px;border-radius:10px">
+          <p style="font-size:11px;color:var(--green);margin-top:6px;font-weight:600">Kartenbild gefunden</p>
+        </div>
         <h3 id="scanCardName" style="font-size:16px;font-weight:800"></h3>
         <p id="scanCardSet" style="font-size:12px;color:var(--text2)"></p>
         <p id="scanCardLang" style="font-size:12px;color:var(--text2)"></p>
@@ -1985,6 +1989,14 @@ Wenn du etwas nicht erkennen kannst, setze den Wert auf "".`}
       }}
     }catch{}
   }
+  // Show matched image
+  const imgWrap=document.getElementById('scanMatchedImage');
+  if(scanCardData._tcgImage){
+    document.getElementById('scanMatchedImg').src=imgSrc(scanCardData._tcgImage)+'/high.webp';
+    imgWrap.style.display='block';
+  } else {
+    imgWrap.style.display='none';
+  }
 }
 
 async function saveScanCard(){
@@ -2036,6 +2048,7 @@ function resetScan(){
   scanCardData=null;scanPhotoData=null;
   document.getElementById('scanPreviewWrap').style.display='none';
   document.getElementById('scanResultForm').style.display='none';
+  document.getElementById('scanMatchedImage').style.display='none';
   document.getElementById('scanStatus').innerHTML='';
   document.getElementById('scanCondition').value='';
   document.getElementById('scanPrice').value='';
