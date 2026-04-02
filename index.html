@@ -858,6 +858,8 @@ function condColor(val){
   if(val==='Sealed')return 'background:rgba(16,185,129,.12);color:#10b981';
   return 'background:rgba(52,211,153,.12);color:var(--green)';
 }
+const LANG_FLAGS={JP:'🇯🇵',DE:'🇩🇪',EN:'🇬🇧',FR:'🇫🇷',CN:'🇨🇳'};
+function langFlag(code){return LANG_FLAGS[code]||code}
 function dedupeById(arr){const s=new Set();return arr.filter(c=>s.has(c.id)?false:!!s.add(c.id))}
 function imgSrc(url){return url?(url.startsWith('data:')||url.endsWith('.png')||url.endsWith('.jpg')||url.endsWith('.webp')||url.includes('pricecharting.com')?url:url+'/low.webp'):''}
 
@@ -994,7 +996,7 @@ function renderDashboard(){
         <div class="name">${c.name}</div>
         <div class="set">${c.setName||c.setId||''}</div>
         <div class="badges">
-                    <span class="badge badge-lang">${c.language}</span>
+                    <span class="badge badge-lang" title="${c.language}">${langFlag(c.language)}</span>
         </div>
       </div>
       <div class="card-price"><div class="val">${fmtE(c.price||0)}</div></div>
@@ -1167,7 +1169,7 @@ function renderCollection(){
         <div class="name">${c.name}</div>
         <div class="set">${c.setName||c.setId||c.category}</div>
         <div class="badges">
-          <span class="badge badge-lang">${c.language}</span>
+          <span class="badge badge-lang" title="${c.language}">${langFlag(c.language)}</span>
                     ${c.condition?`<span class="badge" style="${condColor(c.condition)}">${c.condition}</span>`:''}
         </div>
       </div>
@@ -2612,7 +2614,7 @@ function openModal(id){
 
   document.getElementById('modalGrid').innerHTML=`
     <div class="detail-cell" style="cursor:pointer" onclick="editPrice('${c.id}')"><div class="label">Wert ✏️</div><div class="value" style="color:var(--accent)" id="modalPriceValue">${fmtE(c.price||0)}</div></div>
-    <div class="detail-cell"><div class="label">Sprache</div><div class="value">${c.language||'–'}</div></div>
+    <div class="detail-cell"><div class="label">Sprache</div><div class="value" style="font-size:24px">${langFlag(c.language)}</div></div>
     <div class="detail-cell" style="cursor:pointer" onclick="editCondition('${c.id}')"><div class="label">Zustand ✏️</div><div class="value" id="modalCondValue"><span style="padding:2px 8px;border-radius:6px;font-weight:700;${condColor(c.condition)}">${c.condition||'–'}</span></div></div>
     <div class="detail-cell"><div class="label">Hinzugefügt</div><div class="value" style="font-size:12px">${c.dateAdded?new Date(c.dateAdded).toLocaleDateString('de-DE'):'–'}</div></div>
   `;
