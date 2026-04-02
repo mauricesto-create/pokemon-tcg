@@ -157,7 +157,6 @@ input{font-family:inherit}
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
 .badge-lang{background:var(--accent-light);color:var(--accent)}
 .badge-cond{background:rgba(52,211,153,.12);color:var(--green)}
-.badge-grade{background:rgba(255,255,255,.15);color:#fff}
 .card-price{text-align:right;display:flex;flex-direction:column;justify-content:center;flex-shrink:0}
 .card-price .val{font-size:15px;font-weight:800}
 .card-price .trend{font-size:10px;font-weight:600}
@@ -464,10 +463,6 @@ canvas{max-width:100%!important}
       <label class="form-label">Zustand</label>
       <select class="form-select" id="addCondition"></select>
     </div>
-    <div class="form-group" id="gradeGroup" style="display:none">
-      <label class="form-label">Grade</label>
-      <select class="form-select" id="addGrade"></select>
-    </div>
     <div class="form-group">
       <label class="form-label">Preis (€) — manuell überschreiben</label>
       <input class="form-input" type="number" id="addPrice" step="0.01" placeholder="Automatisch von Cardmarket">
@@ -515,10 +510,6 @@ canvas{max-width:100%!important}
     <div class="form-group">
       <label class="form-label">Zustand</label>
       <select class="form-select" id="manualCondition"></select>
-    </div>
-    <div class="form-group" id="manualGradeGroup" style="display:none">
-      <label class="form-label">Grade</label>
-      <select class="form-select" id="manualGrade"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Preis (€) *</label>
@@ -620,7 +611,7 @@ canvas{max-width:100%!important}
 </div>
 
 <!-- ═══ Condition Editor Modal ═══ -->
-<div class="modal-overlay" id="condModal" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="modal-overlay" id="condModal" style="z-index:200" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal" style="max-width:380px">
     <div class="modal-handle"></div>
     <h3 style="font-size:16px;font-weight:800;text-align:center;margin-bottom:4px" id="condModalTitle">Zustand wählen</h3>
@@ -799,13 +790,13 @@ const TCGDEX='https://api.tcgdex.net/v2';
 let CATEGORIES=[['Binder','Binder'],['Eevee Binder','Eevee Binder'],['Random Binder','Random Binder'],['Slabs','Slabs'],['Sealed','Sealed'],['Sealed Promos','Sealed Promos'],['151 Master','151 Master JP'],['Terastal Master','Terastal Master']];
 const LANGUAGES=[['JP','Japanisch (JP)'],['DE','Deutsch (DE)'],['EN','Englisch (EN)'],['FR','Französisch (FR)'],['CN','Chinesisch (CN)'],['CH','Chinesisch Trad. (CH)']];
 const CONDITIONS=[['NM','Near Mint (NM)'],['EXC','Excellent (EXC)'],['GD','Good (GD)'],['LP','Light Played (LP)'],['PO','Poor (PO)'],['Sealed','Sealed']];
-const GRADES=[['','Kein Grade'],['PSA 10','PSA 10'],['PSA 9','PSA 9'],['PSA 8','PSA 8'],['PSA 7','PSA 7'],['CGC Pristine 10','CGC Pristine 10'],['CGC 9.5','CGC 9.5'],['CGC 9','CGC 9'],['ACE 10','ACE 10']];
 function fillSelect(id,opts){const el=document.getElementById(id);if(!el)return;el.innerHTML=opts.map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}
 const PKM_NAMES={flamara:'flareon',aquana:'vaporeon',blitza:'jolteon',psiana:'espeon',nachtara:'umbreon',folipurba:'leafeon',glaziola:'glaceon',feelinara:'sylveon',evoli:'eevee',glurak:'charizard',bisaflor:'venusaur',turtok:'blastoise',pikachu:'pikachu',mewtu:'mewtwo',mew:'mew',relaxo:'snorlax',gengar:'gengar',dragoran:'dragonite',arktos:'articuno',zapdos:'zapdos',lavados:'moltres',lugia:'lugia',ho:'ho-oh',celebi:'celebi',rayquaza:'rayquaza',dialga:'dialga',palkia:'palkia',giratina:'giratina',arceus:'arceus',reshiram:'reshiram',zekrom:'zekrom',xerneas:'xerneas',yveltal:'yveltal',solgaleo:'solgaleo',lunala:'lunala',zacian:'zacian',zamazenta:'zamazenta',miraidon:'miraidon',koraidon:'koraidon',bisasam:'bulbasaur',bisaknosp:'ivysaur',glumanda:'charmander',glutexo:'charmeleon',schiggy:'squirtle',schillok:'wartortle',raichu:'raichu',pummeluff:'jigglypuff',vulpix:'vulpix',vulnona:'ninetales',knuddeluff:'wigglytuff',simsala:'alakazam',machomei:'machamp',quappo:'poliwrath',nebulak:'gastly',alpollo:'haunter',onix:'onix',rizeros:'rhydon',chaneira:'chansey',kangama:'kangaskhan',pantimos:'mr. mime',lapras:'lapras',ditto:'ditto',porygon:'porygon',aerodactyl:'aerodactyl',garados:'gyarados',kokowei:'exeggutor',rossana:'jynx',elektek:'electabuzz',magmar:'magmar',pinsir:'pinsir',tauros:'tauros',endivie:'chikorita',feurigel:'cyndaquil',karnimani:'totodile',noctuh:'noctowl',ampharos:'ampharos',marill:'marill',quaxo:'politoed',sonnfel:'sunflora',despotar:'tyranitar',geckarbor:'treecko',flemmli:'torchic',hydropi:'mudkip',kapilz:'breloom',letarking:'slaking',guardevoir:'gardevoir',brutalanda:'salamence',metagross:'metagross',kyogre:'kyogre',groudon:'groudon',chelast:'turtwig',panflam:'chimchar',plinfa:'piplup',lucario:'lucario',knakrack:'garchomp',cresselia:'cresselia',darkrai:'darkrai',shaymin:'shaymin',ottaro:'oshawott',serpifeu:'snivy',floink:'tepig',zoroark:'zoroark',kyurem:'kyurem',igamaro:'chespin',fynx:'fennekin',froxy:'froakie',quajutsu:'greninja',bauz:'rowlet',flamiau:'litten',robball:'popplio',wolwerock:'lycanroc',katagami:'kartana',chimpep:'grookey',hopplo:'scorbunny',memmeon:'sobble',duraludon:'duraludon',zarude:'zarude',felori:'sprigatito',krokel:'fuecoco',kwaks:'quaxly',gierspenst:'gholdengo',miraidon:'miraidon',koraidon:'koraidon',lechonk:'lechonk',fidough:'fidough'};
 const PKM_NAMES_REV=Object.fromEntries(Object.entries(PKM_NAMES).map(([d,e])=>[e,d]));
 function getAltNames(q){const lo=q.toLowerCase();const alts=new Set();alts.add(lo);if(PKM_NAMES[lo])alts.add(PKM_NAMES[lo]);if(PKM_NAMES_REV[lo])alts.add(PKM_NAMES_REV[lo]);for(const[d,e]of Object.entries(PKM_NAMES)){if(d.startsWith(lo)||e.startsWith(lo)){alts.add(d);alts.add(e)}}return[...alts]}
 function condColor(val){
   if(!val)return '';
+  if(/^(PSA|CGC|BGS|ACE)\s/i.test(val))return 'background:rgba(255,255,255,.15);color:#fff';
   if(val==='NM')return 'background:rgba(16,185,129,.15);color:#10b981';
   if(val==='EXC')return 'background:rgba(249,115,22,.15);color:#f97316';
   if(val==='GD')return 'background:rgba(234,179,8,.15);color:#eab308';
@@ -813,7 +804,6 @@ function condColor(val){
   if(val==='Sealed')return 'background:rgba(16,185,129,.12);color:#10b981';
   return 'background:rgba(52,211,153,.12);color:var(--green)';
 }
-function gradeColor(){return 'background:rgba(255,255,255,.15);color:#fff'}
 function dedupeById(arr){const s=new Set();return arr.filter(c=>s.has(c.id)?false:!!s.add(c.id))}
 function imgSrc(url){return url?(url.startsWith('data:')||url.endsWith('.png')||url.endsWith('.jpg')||url.endsWith('.webp')||url.includes('pricecharting.com')?url:url+'/low.webp'):''}
 
@@ -950,8 +940,7 @@ function renderDashboard(){
         <div class="name">${c.name}</div>
         <div class="set">${c.setName||c.setId||''}</div>
         <div class="badges">
-          ${c.grade?`<span class="badge" style="${gradeColor()}">${c.grade}</span>`:''}
-          <span class="badge badge-lang">${c.language}</span>
+                    <span class="badge badge-lang">${c.language}</span>
         </div>
       </div>
       <div class="card-price"><div class="val">${fmtE(c.price||0)}</div></div>
@@ -991,13 +980,13 @@ function renderCollection(){
   const search=(document.getElementById('collSearch').value||'').toLowerCase();
   const cats=['Alle',...new Set(cards.map(c=>c.category))];
 
-  const noCondCount=cards.filter(c=>!c.condition&&!c.grade).length;
+  const noCondCount=cards.filter(c=>!c.condition).length;
   document.getElementById('collChips').innerHTML=cats.map(c=>
     `<button class="chip${activeFilter===c?' active':''}" onclick="activeFilter='${c}';renderCollection()">${c}</button>`
   ).join('')+(noCondCount?`<button class="chip${activeFilter==='_noCond'?' active':''}" style="border-color:var(--red);color:${activeFilter==='_noCond'?'#fff':'var(--red)'};background:${activeFilter==='_noCond'?'var(--red)':'transparent'}" onclick="activeFilter='_noCond';renderCollection()">Ohne Zustand (${noCondCount})</button><button class="chip" style="border-color:var(--accent);color:var(--accent)" onclick="startBatch()">⚡ Stapel</button>`:'');
 
   let filtered=cards;
-  if(activeFilter==='_noCond') filtered=filtered.filter(c=>!c.condition&&!c.grade);
+  if(activeFilter==='_noCond') filtered=filtered.filter(c=>!c.condition);
   else if(activeFilter!=='Alle') filtered=filtered.filter(c=>c.category===activeFilter);
   if(search){const words=search.split(/\s+/).filter(Boolean);filtered=filtered.filter(c=>{const n=(c.name+'|'+(c.setName||'')+'|'+(c.setId||'')).toLowerCase();return words.every(w=>{const alts=getAltNames(w);return alts.some(a=>n.includes(a))})})}
   filtered.sort((a,b)=>(b.price||0)-(a.price||0));
@@ -1022,8 +1011,7 @@ function renderCollection(){
         <div class="set">${c.setName||c.setId||c.category}</div>
         <div class="badges">
           <span class="badge badge-lang">${c.language}</span>
-          ${c.grade?`<span class="badge" style="${gradeColor()}">${c.grade}</span>`:''}
-          ${c.condition?`<span class="badge" style="${condColor(c.condition)}">${c.condition}</span>`:''}
+                    ${c.condition?`<span class="badge" style="${condColor(c.condition)}">${c.condition}</span>`:''}
         </div>
       </div>
       <div class="card-price">
@@ -1937,7 +1925,7 @@ async function matchAllImages(){
 
 // Show grade field when Slabs selected
 document.getElementById('addCategory').addEventListener('change',e=>{
-  document.getElementById('gradeGroup').style.display=e.target.value==='Slabs'?'block':'none';
+  fillSelect('addCondition',getCondOptions(e.target.value).map(([v,t])=>[v,t]));
 });
 
 async function saveCard(){
@@ -1953,7 +1941,6 @@ async function saveCard(){
     category: document.getElementById('addCategory').value,
     language: document.getElementById('addLang').value,
     condition: document.getElementById('addCondition').value,
-    grade: document.getElementById('addGrade').value||'',
     price: parseFloat(document.getElementById('addPrice').value)||0,
     priceTrend: null,
     photos: addPhotoData ? [addPhotoData] : [],
@@ -1997,7 +1984,7 @@ function switchAddTab(tab){
 
 // Show grade field when Slabs selected (manual tab)
 document.getElementById('manualCategory').addEventListener('change',e=>{
-  document.getElementById('manualGradeGroup').style.display=e.target.value==='Slabs'?'block':'none';
+  fillSelect('manualCondition',getCondOptions(e.target.value).map(([v,t])=>[v,t]));
 });
 
 // ═══════════════════════════════════════════════
@@ -2209,7 +2196,6 @@ async function saveManualCard(){
     category: document.getElementById('manualCategory').value,
     language: document.getElementById('manualLang').value,
     condition: document.getElementById('manualCondition').value,
-    grade: document.getElementById('manualGrade').value||'',
     price: price,
     priceTrend: null,
     photos: [],
@@ -2225,8 +2211,6 @@ async function saveManualCard(){
   document.getElementById('manualCategory').value='Binder';
   document.getElementById('manualLang').value='JP';
   document.getElementById('manualCondition').value='NM';
-  document.getElementById('manualGrade').value='';
-  document.getElementById('manualGradeGroup').style.display='none';
   // Show success & switch to collection
   setTimeout(()=>{
     document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
@@ -2283,7 +2267,7 @@ let batchIndex=0;
 let batchDone=0;
 
 function startBatch(){
-  batchCards=cards.filter(c=>!c.condition&&!c.grade);
+  batchCards=cards.filter(c=>!c.condition);
   if(!batchCards.length){showToast('Alle Karten haben einen Zustand');return}
   batchIndex=0;batchDone=0;
   document.getElementById('batchModal').classList.add('open');
@@ -2305,8 +2289,7 @@ function showBatchCard(){
 
 async function setBatchCondition(val){
   const c=batchCards[batchIndex];
-  if(/^(PSA|CGC|BGS|ACE)\s/i.test(val)){c.grade=val;c.condition=''}
-  else{c.condition=val;c.grade=''}
+  c.condition=val;c.grade=''
   await updateCard(c);
   batchDone++;
   batchIndex++;
@@ -2433,14 +2416,14 @@ function editCondition(cardId){
   const c=cards.find(x=>x.id===cardId);
   if(!c) return;
   condEditCardId=cardId;
-  const current=c.grade||c.condition||'';
+  const current=c.condition||'';
   const opts=getCondOptions(c.category);
-  document.getElementById('condModalTitle').textContent=c.grade?'Grade wählen':'Zustand wählen';
+  document.getElementById('condModalTitle').textContent='Zustand wählen';
   document.getElementById('condModalSub').textContent=c.name;
   document.getElementById('condModalFree').value='';
   document.getElementById('condModalOptions').innerHTML=opts.map(([v])=>{
     const active=v===current;
-    const style=v.startsWith('PSA')||v.startsWith('CGC')?gradeColor():condColor(v);
+    const style=condColor(v);
     return `<button onclick="saveConditionVal('${v}')" style="padding:12px 16px;border-radius:12px;border:2px solid ${active?'var(--accent)':'var(--border)'};cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;gap:10px;transition:all .15s;background:var(--card);color:var(--text)">
       <span style="display:inline-block;padding:3px 10px;border-radius:8px;font-size:13px;${style}">${v}</span>
       ${active?'<span style="margin-left:auto;color:var(--accent);font-size:16px">✓</span>':''}
@@ -2453,8 +2436,7 @@ async function saveConditionVal(val){
   if(!condEditCardId) return;
   const c=cards.find(x=>x.id===condEditCardId);
   if(!c) return;
-  if(/^(PSA|CGC|BGS|ACE)\s/i.test(val)){c.grade=val;c.condition=''}
-  else{c.condition=val;c.grade=''}
+  c.condition=val;c.grade=''
   document.getElementById('condModal').classList.remove('open');
   await updateCard(c);
   await loadCards();
@@ -2477,7 +2459,7 @@ function openModal(id){
   document.getElementById('modalGrid').innerHTML=`
     <div class="detail-cell" style="cursor:pointer" onclick="editPrice('${c.id}')"><div class="label">Wert ✏️</div><div class="value" style="color:var(--accent)" id="modalPriceValue">${fmtE(c.price||0)}</div></div>
     <div class="detail-cell"><div class="label">Sprache</div><div class="value">${c.language||'–'}</div></div>
-    <div class="detail-cell" style="cursor:pointer" onclick="editCondition('${c.id}')"><div class="label">${c.grade?'Grade':'Zustand'} ✏️</div><div class="value" id="modalCondValue"><span style="padding:2px 8px;border-radius:6px;font-weight:700;${c.grade?gradeColor():condColor(c.condition)}">${c.grade||c.condition||'–'}</span></div></div>
+    <div class="detail-cell" style="cursor:pointer" onclick="editCondition('${c.id}')"><div class="label">Zustand ✏️</div><div class="value" id="modalCondValue"><span style="padding:2px 8px;border-radius:6px;font-weight:700;${condColor(c.condition)}">${c.condition||'–'}</span></div></div>
     <div class="detail-cell"><div class="label">Hinzugefügt</div><div class="value" style="font-size:12px">${c.dateAdded?new Date(c.dateAdded).toLocaleDateString('de-DE'):'–'}</div></div>
   `;
 
@@ -2651,7 +2633,7 @@ document.getElementById('fileInput').addEventListener('change',async e=>{
           }
           // Update condition/grade if changed
           if(imp.condition&&imp.condition!==existing.condition){existing.condition=imp.condition;await updateCard(existing)}
-          if(imp.grade&&imp.grade!==existing.grade){existing.grade=imp.grade;await updateCard(existing)}
+          if(imp.grade&&!existing.condition){existing.condition=imp.grade;existing.grade='';await updateCard(existing)}
         } else {
           // New card — add it
           await addCard(imp);
@@ -2817,7 +2799,6 @@ Chart.defaults.font.family="'Inter',sans-serif";
 ['scanCategory','addCategory','manualCategory'].forEach(id=>fillSelect(id,CATEGORIES));
 ['addLang','manualLang'].forEach(id=>fillSelect(id,LANGUAGES));
 ['addCondition','manualCondition'].forEach(id=>fillSelect(id,CONDITIONS));
-['addGrade','manualGrade'].forEach(id=>fillSelect(id,GRADES));
 
 auth.onAuthStateChanged(async user=>{
   const loginScreen=document.getElementById('loginScreen');
@@ -2839,12 +2820,15 @@ auth.onAuthStateChanged(async user=>{
     // Migrate old condition values
     const condMap={'EX':'EXC','Excellent':'EXC','Near Mint':'NM','Good':'GD','Light Played':'LP','Poor':'PO','Heavy Played':'HP','Damaged':'DMG','MP':'GD','HP':'LP','DMG':'PO'};
     const toFix=cards.filter(c=>c.condition&&condMap[c.condition]);
-    const sealedFix=cards.filter(c=>(c.category==='Sealed'||c.category==='Sealed Promos')&&!c.condition&&!c.grade);
+    const sealedFix=cards.filter(c=>(c.category==='Sealed'||c.category==='Sealed Promos')&&!c.condition);
     sealedFix.forEach(c=>c.condition='Sealed');
     // Set 151 Master + Terastal Master without condition to NM
-    const masterFix=cards.filter(c=>(c.category==='151 Master'||c.category==='Terastal Master')&&!c.condition&&!c.grade);
+    const masterFix=cards.filter(c=>(c.category==='151 Master'||c.category==='Terastal Master')&&!c.condition);
     masterFix.forEach(c=>c.condition='NM');
-    const allFix=[...toFix,...sealedFix,...masterFix];
+    // Migrate grade → condition (unified field)
+    const gradeFix=cards.filter(c=>c.grade&&!c.condition);
+    gradeFix.forEach(c=>{c.condition=c.grade;c.grade=''});
+    const allFix=[...toFix,...sealedFix,...masterFix,...gradeFix];
     if(allFix.length){bulkMode=true;for(const c of toFix){c.condition=condMap[c.condition]};for(const c of allFix){await updateCard(c)}bulkMode=false;await loadCards()}
     renderDashboard();
 
