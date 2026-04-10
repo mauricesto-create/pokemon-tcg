@@ -3158,7 +3158,24 @@ auth.onAuthStateChanged(async user=>{
     // Migrate CH/TW → CN
     const langFix=cards.filter(c=>c.language==='CH'||c.language==='TW');
     langFix.forEach(c=>c.language='CN');
-    const allFix=[...toFix,...sealedFix,...masterFix,...gradeFix,...langFix];
+    // Backfill setId/setName from card name when mappable
+    const isCatName=v=>CATEGORIES.some(([k])=>k===v);
+    const setFix=[];
+    for(const c of cards){
+      const hasValidSet=c.setName&&!isCatName(c.setName)&&lookupSetName(c.setId||c.setName);
+      if(hasValidSet) continue;
+      if(!c.name) continue;
+      const info=extractSetInfo(c.name);
+      if(!info||!info.set) continue;
+      const mapped=lookupSetName(info.set);
+      if(!mapped) continue;
+      if(c.setId!==info.set||c.setName!==mapped){
+        c.setId=info.set;
+        c.setName=mapped;
+        setFix.push(c);
+      }
+    }
+    const allFix=[...toFix,...sealedFix,...masterFix,...gradeFix,...langFix,...setFix];
     if(allFix.length){bulkMode=true;for(const c of toFix){c.condition=condMap[c.condition]};for(const c of allFix){await updateCard(c)}bulkMode=false;await loadCards()}
     renderDashboard();
 
