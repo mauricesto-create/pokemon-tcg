@@ -893,6 +893,13 @@ function condColor(val){
 }
 const LANG_FLAG_CODES={JP:'1f1ef-1f1f5',DE:'1f1e9-1f1ea',EN:'1f1ec-1f1e7',FR:'1f1eb-1f1f7',CN:'1f1e8-1f1f3'};
 function langFlag(code,size=16){const f=LANG_FLAG_CODES[code];if(!f)return code;return `<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${f}.png" alt="${code}" style="width:${size}px;height:${size}px;vertical-align:middle">`}
+function displaySet(c){
+  // Ignore setName if it's actually a category (legacy manual cards)
+  const isCategoryName=v=>CATEGORIES.some(([k])=>k===v);
+  if(c.setName&&!isCategoryName(c.setName)) return c.setName;
+  if(c.setId&&!isCategoryName(c.setId)) return c.setId;
+  return c.category||'';
+}
 function dedupeById(arr){const s=new Set();return arr.filter(c=>s.has(c.id)?false:!!s.add(c.id))}
 function imgSrc(url){return url?(url.startsWith('data:')||url.endsWith('.png')||url.endsWith('.jpg')||url.endsWith('.webp')||url.includes('pricecharting.com')?url:url+'/low.webp'):''}
 
@@ -1200,7 +1207,7 @@ function renderCollection(){
       <div class="card-thumb">${c.photos&&c.photos.length?`<img src="${c.photos[0]}" alt="" loading="lazy">`:c.image?`<img src="${imgSrc(c.image)}" alt="" loading="lazy">`:'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--card),var(--bg))"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>'}</div>
       <div class="card-details">
         <div class="name">${c.name}</div>
-        <div class="set">${c.setName||c.setId||c.category}</div>
+        <div class="set">${displaySet(c)} • ${c.category}</div>
         <div class="badges">
           <span class="badge badge-lang" title="${c.language}">${langFlag(c.language)}</span>
                     ${c.condition?`<span class="badge" style="${condColor(c.condition)}">${c.condition}</span>`:''}
@@ -2424,7 +2431,8 @@ function openCardEdit(cardId){
   if(!c) return;
   cardEditId=cardId;
   document.getElementById('editCardName').value=c.name||'';
-  document.getElementById('editCardSet').value=c.setName||'';
+  const isCatName=CATEGORIES.some(([k])=>k===c.setName);
+  document.getElementById('editCardSet').value=isCatName?'':(c.setName||'');
   fillSelect('editCardCategory',CATEGORIES);
   fillSelect('editCardLang',LANGUAGES);
   fillSelect('editCardCondition',getCondOptions(c.category));
@@ -2442,7 +2450,9 @@ async function saveCardEdit(){
   const c=cards.find(x=>x.id===cardEditId);
   if(!c) return;
   c.name=document.getElementById('editCardName').value.trim()||c.name;
-  c.setName=document.getElementById('editCardSet').value.trim();
+  const newSet=document.getElementById('editCardSet').value.trim();
+  // Don't save setName if it equals a category (legacy cleanup)
+  c.setName=CATEGORIES.some(([k])=>k===newSet)?'':newSet;
   c.category=document.getElementById('editCardCategory').value;
   c.language=document.getElementById('editCardLang').value;
   c.condition=document.getElementById('editCardCondition').value;
@@ -2680,7 +2690,7 @@ function openModal(id){
   currentModalCardId=id;
   renderModalPhotos(c);
   document.getElementById('modalName').textContent=c.name;
-  document.getElementById('modalSet').textContent=`${c.setName||''} ${c.localId?'#'+c.localId:''} • ${c.category}`;
+  document.getElementById('modalSet').textContent=`${displaySet(c)} ${c.localId?'#'+c.localId:''} • ${c.category}`;
 
   document.getElementById('modalGrid').innerHTML=`
     <div class="detail-cell" style="cursor:pointer" onclick="editPrice('${c.id}')"><div class="label">Wert ✏️</div><div class="value" style="color:var(--accent)" id="modalPriceValue">${fmtE(c.price||0)}</div></div>
