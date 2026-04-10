@@ -869,6 +869,76 @@ let unsubCards = null; // Firestore snapshot listener
 const CAT_COLORS = {'Slabs':'#8b5cf6','Binder':'#3b82f6','Sealed':'#10b981','Random Binder':'#f59e0b',
   'Eevee Binder':'#ec4899','151 Master':'#06b6d4','Terastal Master':'#6366f1','Sealed Promos':'#94a3b8'};
 const LANG_COLORS = {JP:'#ef4444',DE:'#3b82f6',EN:'#10b981',FR:'#f59e0b',CN:'#8b5cf6'};
+
+// ─── Pokémon TCG Set ID → Set Name Mapping ───
+const SET_NAMES={
+  // ═══ Japanese Scarlet & Violet ═══
+  'sv1a':'Triplet Beat','sv1s':'Scarlet ex','sv1v':'Violet ex',
+  'sv2a':'Pokémon 151','sv2d':'Clay Burst','sv2p':'Snow Hazard',
+  'sv3':'Ruler of the Black Flame','sv3a':'Raging Surf',
+  'sv4a':'Shiny Treasure ex','sv4d':'Future Flash','sv4k':'Wild Force','sv4m':'Cyber Judge',
+  'sv5a':'Crimson Haze','sv5k':'Wild Force','sv5m':'Cyber Judge',
+  'sv6':'Mask of Change','sv6a':'Night Wanderer',
+  'sv7':'Stellar Miracle','sv7a':'Paradise Dragona',
+  'sv8':'Super Electric Breaker','sv8a':'Terastal Festival ex',
+  'sv9':'Battle Partners','sv9a':'Heat Wave Arena',
+  'sv10':'Rising Volt Tacklers','sv10a':'Glory of Team Rocket',
+  'sv11w':'White Flare','sv11b':'Black Bolt','sv11B':'Black Bolt','sv11W':'White Flare',
+  'svp':'SV Promo','sv-p':'SV Promo','SV-P':'SV Promo','svP':'SV Promo',
+  // ═══ English Scarlet & Violet ═══
+  'sv1':'Scarlet & Violet','sv2':'Paldea Evolved','sv3pt5':'151',
+  'sv4':'Paradox Rift','sv4pt5':'Paldean Fates','sv5':'Temporal Forces',
+  'sv6pt5':'Shrouded Fable','sv8pt5':'Prismatic Evolutions',
+  'sv10pt5':'Black Bolt & White Flare',
+  // ═══ English Sword & Shield ═══
+  'swsh1':'Sword & Shield','swsh2':'Rebel Clash','swsh3':'Darkness Ablaze',
+  'swsh35':'Champion\'s Path','swsh4':'Vivid Voltage','swsh45':'Shining Fates',
+  'swsh5':'Battle Styles','swsh6':'Chilling Reign','swsh7':'Evolving Skies','evs':'Evolving Skies',
+  'swsh8':'Fusion Strike','swsh9':'Brilliant Stars','swsh10':'Astral Radiance',
+  'swsh105':'Pokémon GO','swsh11':'Lost Origin','swsh12':'Silver Tempest',
+  'swsh125':'Crown Zenith','swshp':'SWSH Promo',
+  // ═══ Japanese Sword & Shield ═══
+  's1':'Sword','s1H':'Shield','s1W':'Sword','s1a':'VMAX Rising',
+  's2':'Rebellion Crash','s2a':'Explosive Walker',
+  's3':'Infinity Zone','s3a':'Legendary Heartbeat',
+  's4':'Shocking Volt Tackle','s4a':'Shiny Star V',
+  's5a':'Matchless Fighters','s5I':'Single Strike Master','s5R':'Rapid Strike Master',
+  's6':'Silver Lance / Jet-Black Spirit','s6H':'Silver Lance','s6K':'Jet-Black Spirit','s6a':'Eevee Heroes',
+  's7D':'Towering Perfection','s7R':'Blue Sky Stream',
+  's8':'Fusion Arts','s8a':'25th Anniversary Collection','s8b':'VMAX Climax',
+  's9':'Star Birth','s9a':'Battle Region',
+  's10a':'Dark Phantasma','s10b':'Pokémon GO','s10D':'Time Gazer','s10P':'Space Juggler',
+  's11':'Lost Abyss','s11a':'Incandescent Arcana','s12':'Paradigm Trigger','s12a':'VSTAR Universe',
+  's-p':'SWSH Promo','sP':'SWSH Promo',
+  // ═══ Japanese Sun & Moon ═══
+  'sm1':'Collection Sun / Moon','sm2':'Alolan Moonlight','sm3':'Burning Shadows',
+  'sm4':'Darkness That Consumes Light','sm5':'Ultra Sun / Ultra Moon','sm6':'Forbidden Light',
+  'sm7':'Super-Burst Impact','sm8':'Sky Legend','sm9':'Tag Bolt','sm10':'Double Blaze',
+  'sm11':'Miracle Twin','sm11a':'Remix Bout','sm11b':'Dream League','sm12':'Alter Genesis',
+  'sm12a':'TAG TEAM GX All Stars','sm-p':'SM Promo','SM-p':'SM Promo','SM-P':'SM Promo','smp':'SM Promo',
+  // ═══ English Sun & Moon ═══
+  'sm1e':'Sun & Moon','sm2e':'Guardians Rising','sm3e':'Burning Shadows',
+  'sm4e':'Crimson Invasion','sm5e':'Ultra Prism','sm6e':'Forbidden Light',
+  'sm7e':'Celestial Storm','sm75':'Dragon Majesty','sm8e':'Lost Thunder',
+  'sm9e':'Team Up','sm95':'Detective Pikachu','sm10e':'Unbroken Bonds',
+  'sm11e':'Unified Minds','sm115':'Hidden Fates','sm12e':'Cosmic Eclipse',
+  // ═══ English XY ═══
+  'xy1':'XY','xy2':'Flashfire','xy3':'Furious Fists','xy4':'Phantom Forces',
+  'xy5':'Primal Clash','xy6':'Roaring Skies','xy7':'Ancient Origins','xy8':'BREAKthrough',
+  'xy9':'BREAKpoint','xy10':'Fates Collide','xy11':'Steam Siege','xy12':'Evolutions',
+  'xyp':'XY Promo',
+  // ═══ GBML / Gym & Legendary ═══
+  'gbml':'GB Mewtwo & Lugia','GBML':'GB Mewtwo & Lugia',
+  // ═══ Classic ═══
+  'base1':'Base Set','base2':'Jungle','base3':'Fossil','base4':'Base Set 2',
+  'base5':'Team Rocket','gym1':'Gym Heroes','gym2':'Gym Challenge',
+  'neo1':'Neo Genesis','neo2':'Neo Discovery','neo3':'Neo Revelation','neo4':'Neo Destiny',
+  'ecard1':'Expedition Base Set','ecard2':'Aquapolis','ecard3':'Skyridge'
+};
+function getSetName(setId){
+  if(!setId) return '';
+  return SET_NAMES[setId]||SET_NAMES[setId.toLowerCase()]||SET_NAMES[setId.toUpperCase()]||setId;
+}
 const CAT_ICONS={'Slabs':'🏅','Binder':'📒','Sealed':'🎴','Random Binder':'🃏',
   'Eevee Binder':'🌙','151 Master':'🔴','Terastal Master':'💎','Sealed Promos':'⭐'};
 const ICON_CHOICES=['📒','📕','📗','📘','📙','🗂️','🏅','🎴','🃏','⭐','💎','🔴','🌙','🔥','⚡','💧','🌿','🐉','👑','🎯','🏆','💰','📦','🎁','🎪','🧊','💫','🌈','🖤','❤️'];
@@ -893,9 +963,24 @@ function condColor(val){
 }
 const LANG_FLAG_CODES={JP:'1f1ef-1f1f5',DE:'1f1e9-1f1ea',EN:'1f1ec-1f1e7',FR:'1f1eb-1f1f7',CN:'1f1e8-1f1f3'};
 function langFlag(code,size=16){const f=LANG_FLAG_CODES[code];if(!f)return code;return `<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${f}.png" alt="${code}" style="width:${size}px;height:${size}px;vertical-align:middle">`}
+function lookupSetName(code){
+  if(!code) return null;
+  return SET_NAMES[code]||SET_NAMES[code.toLowerCase()]||SET_NAMES[code.toUpperCase()]||null;
+}
 function displaySet(c){
-  // Ignore setName if it's actually a category (legacy manual cards)
   const isCategoryName=v=>CATEGORIES.some(([k])=>k===v);
+  // 1) Try setId direct lookup
+  let name=lookupSetName(c.setId);
+  if(name) return name;
+  // 2) Try extracting set code from name — e.g. "Flampivian (sv11B 099)"
+  if(c.name){
+    const info=extractSetInfo(c.name);
+    if(info&&info.set){
+      name=lookupSetName(info.set);
+      if(name) return name;
+    }
+  }
+  // 3) Fall back to existing setName if it's not a category
   if(c.setName&&!isCategoryName(c.setName)) return c.setName;
   if(c.setId&&!isCategoryName(c.setId)) return c.setId;
   return c.category||'';
