@@ -639,6 +639,38 @@ canvas{max-width:100%!important}
   </div>
 </div>
 
+<!-- ═══ Card Editor Modal ═══ -->
+<div class="modal-overlay" id="cardEditModal" style="z-index:200" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-handle"></div>
+    <h3 style="font-size:16px;font-weight:800;text-align:center;margin-bottom:16px">Karte bearbeiten</h3>
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input class="form-input" type="text" id="editCardName">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Set</label>
+      <input class="form-input" type="text" id="editCardSet">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Kategorie</label>
+      <select class="form-select" id="editCardCategory"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Sprache</label>
+      <select class="form-select" id="editCardLang"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Zustand</label>
+      <select class="form-select" id="editCardCondition"></select>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="saveCardEdit()" style="flex:1">Speichern</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('cardEditModal').classList.remove('open')" style="flex:1">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ Price Editor Modal ═══ -->
 <div class="modal-overlay" id="priceModal" style="z-index:200" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal" style="max-width:340px">
@@ -780,6 +812,7 @@ canvas{max-width:100%!important}
     <div id="priceChartHint" style="margin-bottom:12px;text-align:center;font-size:12px;color:var(--text2);display:none">Preisverlauf erscheint nach der ersten Preisänderung</div>
     <div class="detail-actions">
       <button class="btn btn-secondary" onclick="closeModal()">Schließen</button>
+      <button class="btn" id="modalEditBtn">Bearbeiten</button>
       <button class="btn btn-danger" id="modalDeleteBtn">Löschen</button>
     </div>
   </div>
@@ -2385,6 +2418,43 @@ async function saveManualCard(){
 // ═══════════════════════════════════════════════
 // Edit Price in Modal
 // ═══════════════════════════════════════════════
+let cardEditId=null;
+function openCardEdit(cardId){
+  const c=cards.find(x=>x.id===cardId);
+  if(!c) return;
+  cardEditId=cardId;
+  document.getElementById('editCardName').value=c.name||'';
+  document.getElementById('editCardSet').value=c.setName||'';
+  fillSelect('editCardCategory',CATEGORIES);
+  fillSelect('editCardLang',LANGUAGES);
+  fillSelect('editCardCondition',getCondOptions(c.category));
+  document.getElementById('editCardCategory').value=c.category||'Binder';
+  document.getElementById('editCardLang').value=c.language||'JP';
+  document.getElementById('editCardCondition').value=c.condition||'';
+  document.getElementById('editCardCategory').onchange=e=>{
+    fillSelect('editCardCondition',getCondOptions(e.target.value));
+  };
+  document.getElementById('cardEditModal').classList.add('open');
+}
+
+async function saveCardEdit(){
+  if(!cardEditId) return;
+  const c=cards.find(x=>x.id===cardEditId);
+  if(!c) return;
+  c.name=document.getElementById('editCardName').value.trim()||c.name;
+  c.setName=document.getElementById('editCardSet').value.trim();
+  c.category=document.getElementById('editCardCategory').value;
+  c.language=document.getElementById('editCardLang').value;
+  c.condition=document.getElementById('editCardCondition').value;
+  document.getElementById('cardEditModal').classList.remove('open');
+  await updateCard(c);
+  await loadCards();
+  renderCollection();
+  renderDashboard();
+  openModal(cardEditId);
+  showToast('Karte aktualisiert');
+}
+
 let priceEditCardId=null;
 function editPrice(cardId){
   const c=cards.find(x=>x.id===cardId);
@@ -2618,6 +2688,7 @@ function openModal(id){
     <div class="detail-cell" style="cursor:pointer" onclick="editCondition('${c.id}')"><div class="label">Zustand ✏️</div><div class="value" id="modalCondValue"><span style="padding:2px 8px;border-radius:6px;font-weight:700;${condColor(c.condition)}">${c.condition||'–'}</span></div></div>
     <div class="detail-cell"><div class="label">Hinzugefügt</div><div class="value" style="font-size:12px">${c.dateAdded?new Date(c.dateAdded).toLocaleDateString('de-DE'):'–'}</div></div>
   `;
+  document.getElementById('modalEditBtn').onclick=()=>openCardEdit(c.id);
 
   // Price history chart
   if(modalChart){modalChart.destroy();modalChart=null}
