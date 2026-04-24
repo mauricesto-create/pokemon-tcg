@@ -866,6 +866,7 @@ let activeFilter = 'Alle';
 let bulkMode = false; // suppress re-renders during bulk operations
 let unsubCards = null; // Firestore snapshot listener
 
+const SEALED_IMG="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='420' viewBox='0 0 300 420'%3E%3Crect width='300' height='420' rx='16' fill='%231a1f2e'/%3E%3Crect x='40' y='60' width='220' height='160' rx='14' fill='%23252d45' stroke='%23d4a44a' stroke-width='3'/%3E%3Crect x='32' y='44' width='236' height='34' rx='10' fill='%232d3655' stroke='%23d4a44a' stroke-width='3'/%3E%3Crect x='138' y='44' width='24' height='180' fill='%23d4a44a' opacity='0.15'/%3E%3Cline x1='40' y1='140' x2='260' y2='140' stroke='%23d4a44a' stroke-width='1' opacity='0.2'/%3E%3Ccircle cx='150' cy='120' r='30' fill='%23d4a44a' opacity='0.15' stroke='%23d4a44a' stroke-width='2' stroke-opacity='0.6'/%3E%3Ctext x='150' y='130' text-anchor='middle' font-family='system-ui' font-size='28' fill='%23d4a44a' opacity='0.8'%3E%E2%9C%A7%3C/text%3E%3Ctext x='150' y='290' text-anchor='middle' font-family='system-ui,sans-serif' font-size='28' font-weight='800' letter-spacing='6' fill='%23d4a44a'%3ESEALED%3C/text%3E%3Cline x1='70' y1='305' x2='230' y2='305' stroke='%23d4a44a' stroke-width='2' opacity='0.4'/%3E%3Ctext x='150' y='345' text-anchor='middle' font-family='system-ui' font-size='13' fill='%23d4a44a' opacity='0.5'%3ECOLLECTION ITEM%3C/text%3E%3C/svg%3E";
 const CAT_COLORS = {'Slabs':'#8b5cf6','Binder':'#3b82f6','Sealed':'#10b981','Random Binder':'#f59e0b',
   'Eevee Binder':'#ec4899','151 Master':'#06b6d4','Terastal Master':'#6366f1','Sealed Promos':'#94a3b8'};
 const LANG_COLORS = {JP:'#ef4444',DE:'#3b82f6',EN:'#10b981',FR:'#f59e0b',CN:'#8b5cf6'};
@@ -1038,6 +1039,10 @@ async function loadCards(){
 }
 
 async function addCard(card){
+  // Sealed-Produkte bekommen automatisch das generische Sealed-Bild
+  if(card.category==='Sealed'&&!card.image&&!card.manualImage){
+    card.image=SEALED_IMG;
+  }
   const {id, ...data}=card;
   await userCardsRef().add(data);
 }
@@ -2105,7 +2110,6 @@ async function matchAllImages(){
   const status=document.getElementById('imageMatchStatus');
 
   // Sealed products get a generic box image — do this FIRST
-  const SEALED_IMG="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='420' viewBox='0 0 300 420'%3E%3Crect width='300' height='420' rx='16' fill='%231a1f2e'/%3E%3Crect x='40' y='60' width='220' height='160' rx='14' fill='%23252d45' stroke='%23d4a44a' stroke-width='3'/%3E%3Crect x='32' y='44' width='236' height='34' rx='10' fill='%232d3655' stroke='%23d4a44a' stroke-width='3'/%3E%3Crect x='138' y='44' width='24' height='180' fill='%23d4a44a' opacity='0.15'/%3E%3Cline x1='40' y1='140' x2='260' y2='140' stroke='%23d4a44a' stroke-width='1' opacity='0.2'/%3E%3Ccircle cx='150' cy='120' r='30' fill='%23d4a44a' opacity='0.15' stroke='%23d4a44a' stroke-width='2' stroke-opacity='0.6'/%3E%3Ctext x='150' y='130' text-anchor='middle' font-family='system-ui' font-size='28' fill='%23d4a44a' opacity='0.8'%3E%E2%9C%A7%3C/text%3E%3Ctext x='150' y='290' text-anchor='middle' font-family='system-ui,sans-serif' font-size='28' font-weight='800' letter-spacing='6' fill='%23d4a44a'%3ESEALED%3C/text%3E%3Cline x1='70' y1='305' x2='230' y2='305' stroke='%23d4a44a' stroke-width='2' opacity='0.4'/%3E%3Ctext x='150' y='345' text-anchor='middle' font-family='system-ui' font-size='13' fill='%23d4a44a' opacity='0.5'%3ECOLLECTION ITEM%3C/text%3E%3C/svg%3E";
   let sealedFixed=0;
   for(const c of cards){
     if(c.category==='Sealed'&&c.image!==SEALED_IMG&&!c.manualImage){
