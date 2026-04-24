@@ -3153,6 +3153,9 @@ auth.onAuthStateChanged(async user=>{
     const toFix=cards.filter(c=>c.condition&&condMap[c.condition]);
     const sealedFix=cards.filter(c=>(c.category==='Sealed'||c.category==='Sealed Promos')&&!c.condition);
     sealedFix.forEach(c=>c.condition='Sealed');
+    // Sealed-Produkte ohne Bild: generisches Sealed-Bild setzen
+    const sealedImgFix=cards.filter(c=>c.category==='Sealed'&&(!c.image||(!c.image.startsWith('data:')&&!c.manualImage)));
+    sealedImgFix.forEach(c=>c.image=SEALED_IMG);
     // Set 151 Master + Terastal Master without condition to NM
     const masterFix=cards.filter(c=>(c.category==='151 Master'||c.category==='Terastal Master')&&!c.condition);
     masterFix.forEach(c=>c.condition='NM');
@@ -3179,7 +3182,7 @@ auth.onAuthStateChanged(async user=>{
         setFix.push(c);
       }
     }
-    const allFix=[...toFix,...sealedFix,...masterFix,...gradeFix,...langFix,...setFix];
+    const allFix=[...toFix,...sealedFix,...sealedImgFix,...masterFix,...gradeFix,...langFix,...setFix];
     if(allFix.length){bulkMode=true;for(const c of toFix){c.condition=condMap[c.condition]};for(const c of allFix){await updateCard(c)}bulkMode=false;await loadCards()}
     renderDashboard();
 
