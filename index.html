@@ -254,6 +254,24 @@ input[type=number]{-moz-appearance:textfield}
 .donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
 .donut-center .v{font-size:20px;font-weight:800;letter-spacing:-.5px}
 .donut-center .l{font-size:10px;color:var(--text2)}
+/* ─── Donut desktop layout ─── */
+.donut-layout{display:flex;flex-direction:column;gap:16px}
+.donut-legend{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.donut-legend-item{display:flex;align-items:center;gap:10px}
+.donut-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.donut-legend-name{font-size:12px;font-weight:600;flex:1;color:var(--text2)}
+.donut-legend-bar-wrap{width:80px;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.donut-legend-bar{height:100%;border-radius:3px;transition:width .4s}
+.donut-legend-val{font-size:12px;font-weight:700;min-width:70px;text-align:right}
+@media(min-width:769px){
+  .donut-layout{flex-direction:row;align-items:center;gap:24px}
+  .donut-layout .donut-wrap{flex:0 0 200px}
+  .donut-layout .donut-legend{flex:1;gap:10px}
+  .donut-legend-name{font-size:13px}
+  .donut-legend-val{font-size:13px}
+  .donut-legend-bar-wrap{width:100px}
+  .donut-center .v{font-size:18px}
+}
 
 /* ─── Back header ─── */
 .sub-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
@@ -356,8 +374,11 @@ canvas{max-width:100%!important}
     <div class="dash-grid">
       <div class="card">
         <div class="card-title">Wertverteilung <span class="tag">Kategorien</span></div>
-        <div class="donut-wrap"><canvas id="chartDonut" height="240"></canvas>
-          <div class="donut-center"><div class="v" id="donutVal"></div><div class="l">Gesamtwert</div></div>
+        <div class="donut-layout">
+          <div class="donut-wrap"><canvas id="chartDonut" height="200"></canvas>
+            <div class="donut-center"><div class="v" id="donutVal"></div><div class="l">Gesamtwert</div></div>
+          </div>
+          <div class="donut-legend" id="donutLegend"></div>
         </div>
       </div>
       <div class="card">
@@ -1138,10 +1159,22 @@ function renderDashboard(){
     charts.donut=new Chart(document.getElementById('chartDonut'),{
       type:'doughnut',
       data:{labels:catArr.map(e=>e[0]),datasets:[{data:catArr.map(e=>e[1].value),
-        backgroundColor:catArr.map(e=>CAT_COLORS[e[0]]||'#94a3b8'),borderWidth:0,hoverOffset:4}]},
-      options:{cutout:'72%',plugins:{legend:{position:'bottom',labels:{font:{size:10,weight:'600'},padding:10,usePointStyle:true}},
+        backgroundColor:catArr.map(e=>CAT_COLORS[e[0]]||'#94a3b8'),borderWidth:0,hoverOffset:6}]},
+      options:{cutout:'74%',plugins:{legend:{display:false},
         tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmtE(ctx.parsed)}`}}}}
     });
+    // Custom legend with bars
+    const legendEl=document.getElementById('donutLegend');
+    legendEl.innerHTML=catArr.map(([name,{value,count}])=>{
+      const pct=total>0?Math.round(value/total*100):0;
+      const color=CAT_COLORS[name]||'#94a3b8';
+      return `<div class="donut-legend-item">
+        <div class="donut-legend-dot" style="background:${color}"></div>
+        <div class="donut-legend-name">${name}</div>
+        <div class="donut-legend-bar-wrap"><div class="donut-legend-bar" style="width:${pct}%;background:${color}"></div></div>
+        <div class="donut-legend-val" style="color:${color}">${fmtE(value)}</div>
+      </div>`;
+    }).join('');
   }
 
   // Language chart
