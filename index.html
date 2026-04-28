@@ -746,7 +746,7 @@ canvas{max-width:100%!important}
     <div class="form-group">
       <label class="form-label">Zustandstyp</label>
       <select class="form-select" id="catCondType">
-        <option value="card">Karten (NM/EXC/GD/LP/PO)</option>
+        <option value="card">Karten (NM/EXC/GD/LP/PL/PO)</option>
         <option value="slab">Slabs (PSA/CGC)</option>
         <option value="sealed">Sealed</option>
       </select>
@@ -962,7 +962,7 @@ const DEFAULT_COLORS=['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899
 const TCGDEX='https://api.tcgdex.net/v2';
 let CATEGORIES=[['Binder','Binder'],['Eevee Binder','Eevee Binder'],['Random Binder','Random Binder'],['Slabs','Slabs'],['Sealed','Sealed'],['Sealed Promos','Sealed Promos'],['151 Master','151 Master JP'],['Terastal Master','Terastal Master']];
 const LANGUAGES=[['JP','Japanisch (JP)'],['DE','Deutsch (DE)'],['EN','Englisch (EN)'],['FR','Französisch (FR)'],['CN','Chinesisch (CN)']];
-const CONDITIONS=[['NM','Near Mint (NM)'],['EXC','Excellent (EXC)'],['GD','Good (GD)'],['LP','Light Played (LP)'],['PO','Poor (PO)'],['Sealed','Sealed']];
+const CONDITIONS=[['NM','Near Mint (NM)'],['EXC','Excellent (EXC)'],['GD','Good (GD)'],['LP','Light Played (LP)'],['PL','Played (PL)'],['PO','Poor (PO)'],['Sealed','Sealed']];
 function fillSelect(id,opts){const el=document.getElementById(id);if(!el)return;el.innerHTML=opts.map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}
 const PKM_NAMES={flamara:'flareon',aquana:'vaporeon',blitza:'jolteon',psiana:'espeon',nachtara:'umbreon',folipurba:'leafeon',glaziola:'glaceon',feelinara:'sylveon',evoli:'eevee',glurak:'charizard',bisaflor:'venusaur',turtok:'blastoise',pikachu:'pikachu',mewtu:'mewtwo',mew:'mew',relaxo:'snorlax',gengar:'gengar',dragoran:'dragonite',arktos:'articuno',zapdos:'zapdos',lavados:'moltres',lugia:'lugia',ho:'ho-oh',celebi:'celebi',rayquaza:'rayquaza',dialga:'dialga',palkia:'palkia',giratina:'giratina',arceus:'arceus',reshiram:'reshiram',zekrom:'zekrom',xerneas:'xerneas',yveltal:'yveltal',solgaleo:'solgaleo',lunala:'lunala',zacian:'zacian',zamazenta:'zamazenta',miraidon:'miraidon',koraidon:'koraidon',bisasam:'bulbasaur',bisaknosp:'ivysaur',glumanda:'charmander',glutexo:'charmeleon',schiggy:'squirtle',schillok:'wartortle',raichu:'raichu',pummeluff:'jigglypuff',vulpix:'vulpix',vulnona:'ninetales',knuddeluff:'wigglytuff',simsala:'alakazam',machomei:'machamp',quappo:'poliwrath',nebulak:'gastly',alpollo:'haunter',onix:'onix',rizeros:'rhydon',chaneira:'chansey',kangama:'kangaskhan',pantimos:'mr. mime',lapras:'lapras',ditto:'ditto',porygon:'porygon',aerodactyl:'aerodactyl',garados:'gyarados',kokowei:'exeggutor',rossana:'jynx',elektek:'electabuzz',magmar:'magmar',pinsir:'pinsir',tauros:'tauros',endivie:'chikorita',feurigel:'cyndaquil',karnimani:'totodile',noctuh:'noctowl',ampharos:'ampharos',marill:'marill',quaxo:'politoed',sonnfel:'sunflora',despotar:'tyranitar',geckarbor:'treecko',flemmli:'torchic',hydropi:'mudkip',kapilz:'breloom',letarking:'slaking',guardevoir:'gardevoir',brutalanda:'salamence',metagross:'metagross',kyogre:'kyogre',groudon:'groudon',chelast:'turtwig',panflam:'chimchar',plinfa:'piplup',lucario:'lucario',knakrack:'garchomp',cresselia:'cresselia',darkrai:'darkrai',shaymin:'shaymin',ottaro:'oshawott',serpifeu:'snivy',floink:'tepig',zoroark:'zoroark',kyurem:'kyurem',igamaro:'chespin',fynx:'fennekin',froxy:'froakie',quajutsu:'greninja',bauz:'rowlet',flamiau:'litten',robball:'popplio',wolwerock:'lycanroc',katagami:'kartana',chimpep:'grookey',hopplo:'scorbunny',memmeon:'sobble',duraludon:'duraludon',zarude:'zarude',felori:'sprigatito',krokel:'fuecoco',kwaks:'quaxly',gierspenst:'gholdengo',miraidon:'miraidon',koraidon:'koraidon',lechonk:'lechonk',fidough:'fidough'};
 const PKM_NAMES_REV=Object.fromEntries(Object.entries(PKM_NAMES).map(([d,e])=>[e,d]));
@@ -973,7 +973,7 @@ function condColor(val){
   if(val==='NM')return 'background:rgba(16,185,129,.15);color:#10b981';
   if(val==='EXC')return 'background:rgba(249,115,22,.15);color:#f97316';
   if(val==='GD')return 'background:rgba(234,179,8,.15);color:#eab308';
-  if(val==='LP'||val==='PO')return 'background:rgba(239,68,68,.15);color:#ef4444';
+  if(val==='LP'||val==='PL'||val==='PO')return 'background:rgba(239,68,68,.15);color:#ef4444';
   if(val==='Sealed')return 'background:rgba(16,185,129,.12);color:#10b981';
   return 'background:rgba(52,211,153,.12);color:var(--green)';
 }
@@ -2665,7 +2665,7 @@ function getCondOptions(category){
     if(custom.condType==='slab') return [['PSA 10','PSA 10'],['PSA 9','PSA 9'],['PSA 8','PSA 8'],['CGC Pristine 10','CGC Pristine 10']];
     if(custom.condType==='sealed') return [['Sealed','Sealed']];
   }
-  return [['NM','NM'],['EXC','EXC'],['GD','GD'],['LP','LP'],['PO','PO']];
+  return [['NM','NM'],['EXC','EXC'],['GD','GD'],['LP','LP'],['PL','PL'],['PO','PO']];
 }
 
 // ═══════════════════════════════════════════════
