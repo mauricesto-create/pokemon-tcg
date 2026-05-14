@@ -1,4 +1,4 @@
-const CACHE = 'pokevault-v11';
+const CACHE = 'pokevault-v12';
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
