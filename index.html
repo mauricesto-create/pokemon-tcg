@@ -1038,16 +1038,77 @@ function condColor(val){
 }
 const LANG_FLAG_CODES={JP:'1f1ef-1f1f5',DE:'1f1e9-1f1ea',EN:'1f1ec-1f1e7',FR:'1f1eb-1f1f7',CN:'1f1e8-1f1f3'};
 function langFlag(code,size=16){const f=LANG_FLAG_CODES[code];if(!f)return code;return `<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${f}.png" alt="${code}" style="width:${size}px;height:${size}px;vertical-align:middle">`}
+// Dynamic set database loaded from pokemontcg.io + TCGdex (cached in localStorage)
+let DYNAMIC_SETS={};
+const SET_DB_TTL=7*24*60*60*1000; // 7 Tage
+
+async function loadSetDb(force=false){
+  if(!force){
+    try{
+      const cached=JSON.parse(localStorage.getItem('setDb')||'null');
+      if(cached&&cached.ts&&Date.now()-cached.ts<SET_DB_TTL&&cached.data&&Object.keys(cached.data).length>50){
+        DYNAMIC_SETS=cached.data;
+        return DYNAMIC_SETS;
+      }
+    }catch{}
+  }
+  const map={};
+  const addEntry=(k,v)=>{if(k&&v&&!map[k])map[k]=v};
+  // pokemontcg.io — hat ptcgoCode (3-Letter-Abkürzung wie LOR, EVS)
+  try{
+    const r=await fetch('https://api.pokemontcg.io/v2/sets?pageSize=250');
+    if(r.ok){
+      const j=await r.json();
+      for(const s of (j.data||[])){
+        if(!s.name) continue;
+        addEntry(s.id,s.name);
+        addEntry((s.id||'').toUpperCase(),s.name);
+        addEntry((s.id||'').toLowerCase(),s.name);
+        if(s.ptcgoCode){
+          addEntry(s.ptcgoCode,s.name);
+          addEntry(s.ptcgoCode.toUpperCase(),s.name);
+          addEntry(s.ptcgoCode.toLowerCase(),s.name);
+        }
+      }
+    }
+  }catch{}
+  // TCGdex EN + JA — füllt JP-Sets und Black Bolt/White Flare
+  for(const lang of ['en','ja']){
+    try{
+      const r=await fetch(`${TCGDEX}/${lang}/sets`);
+      if(r.ok){
+        const arr=await r.json();
+        for(const s of arr){
+          if(!s.name||!s.id) continue;
+          addEntry(s.id,s.name);
+          addEntry(s.id.toUpperCase(),s.name);
+          addEntry(s.id.toLowerCase(),s.name);
+        }
+      }
+    }catch{}
+  }
+  if(Object.keys(map).length>20){
+    DYNAMIC_SETS=map;
+    try{localStorage.setItem('setDb',JSON.stringify({ts:Date.now(),data:map}))}catch{}
+  }
+  return DYNAMIC_SETS;
+}
+
 function lookupSetName(code){
   if(!code) return null;
-  // Direct lookup
+  // 1) Static SET_NAMES — User-spezifische Overrides (sm1M=Collection Moon statt generisch)
   let name=SET_NAMES[code]||SET_NAMES[code.toLowerCase()]||SET_NAMES[code.toUpperCase()];
   if(name) return name;
-  // Indirect via SET_MAP (e.g. user code "LOR" → swsh11 → "Lost Origin")
+  // 2) Dynamic DB von pokemontcg.io + TCGdex (~250 Sets mit offiziellen ptcgoCodes)
+  name=DYNAMIC_SETS[code]||DYNAMIC_SETS[code.toLowerCase()]||DYNAMIC_SETS[code.toUpperCase()];
+  if(name) return name;
+  // 3) Indirect via SET_MAP (User-Code → TCGdex-ID → Name)
   if(typeof SET_MAP!=='undefined'){
     const mapped=SET_MAP[code]||SET_MAP[code.toUpperCase()]||SET_MAP[code.toLowerCase()];
     if(mapped&&mapped!==code){
       name=SET_NAMES[mapped]||SET_NAMES[mapped.toLowerCase()]||SET_NAMES[mapped.toUpperCase()];
+      if(name) return name;
+      name=DYNAMIC_SETS[mapped]||DYNAMIC_SETS[mapped.toLowerCase()]||DYNAMIC_SETS[mapped.toUpperCase()];
       if(name) return name;
     }
   }
@@ -2253,7 +2314,9 @@ async function debugFindCard(name){
 
 async function rematchAllSets(){
   const status=document.getElementById('setMatchStatus');
-  status.textContent='Sets neu zuordnen...';
+  status.textContent='Set-Datenbank wird geladen...';
+  await loadSetDb(true); // force refresh from APIs
+  status.textContent=`Set-DB: ${Object.keys(DYNAMIC_SETS).length} Einträge — Sets neu zuordnen...`;
   let setUpdated=0, checked=0;
   for(const c of cards){
     checked++;
@@ -3328,6 +3391,7 @@ auth.onAuthStateChanged(async user=>{
     startCardListener();
     loadGeminiKey();
     await loadCustomCategories();
+    loadSetDb(); // fire-and-forget, cached in localStorage
     await loadCards();
     // One-time fix: Ensure "Mega Dream" category exists + move all m2a cards from Random Binder
     if(!customCategories.find(c=>c.name==='Mega Dream')){
