@@ -639,7 +639,7 @@ canvas{max-width:100%!important}
   <div class="settings-item" onclick="showMissingImages()">
     <div class="left">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--orange)"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/></svg>
-      <div><div class="label" style="color:var(--orange)">Fehlende Bilder</div><div class="desc" id="missingImgCount">Karten ohne Bild anzeigen</div></div>
+      <div><div class="label" style="color:var(--orange)">Fehlende & kaputte Bilder</div><div class="desc" id="missingImgCount">Karten ohne Bild oder mit defekter URL</div></div>
     </div>
     <div class="right">›</div>
   </div>
@@ -1702,22 +1702,62 @@ async function setCardImageUrl(id){
   renderDashboard();
 }
 
-function showMissingImages(){
+function checkImageOk(url){
+  if(!url) return Promise.resolve(false);
+  if(url.startsWith('data:')) return Promise.resolve(true);
+  return new Promise(resolve=>{
+    const img=new Image();
+    let done=false;
+    const finish=ok=>{if(!done){done=true;resolve(ok)}};
+    img.onload=()=>finish(img.naturalWidth>0);
+    img.onerror=()=>finish(false);
+    img.src=imgSrc(url);
+    setTimeout(()=>finish(false),5000);
+  });
+}
+
+async function showMissingImages(){
   const list=document.getElementById('missingImgList');
+  const countEl=document.getElementById('missingImgCount');
   if(list.style.display!=='none'){list.style.display='none';return}
-  const missing=cards.filter(c=>!c.image&&c.category!=='Sealed');
-  document.getElementById('missingImgCount').textContent=missing.length+' Karten ohne Bild';
-  if(!missing.length){list.style.display='none';return}
-  // Sort by price descending
-  missing.sort((a,b)=>(b.price||0)-(a.price||0));
-  list.innerHTML=missing.map(c=>{
+  list.style.display='block';
+
+  const noImage=cards.filter(c=>!c.image&&c.category!=='Sealed');
+  const toCheck=cards.filter(c=>c.image&&!c.image.startsWith('data:')&&c.category!=='Sealed');
+
+  countEl.textContent='Bilder werden geprüft...';
+  list.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text2);font-size:12px">Prüfe ${toCheck.length} Bilder...</div>`;
+
+  // Check in batches to avoid hammering the browser
+  const broken=[];
+  const BATCH=20;
+  for(let i=0;i<toCheck.length;i+=BATCH){
+    const batch=toCheck.slice(i,i+BATCH);
+    const results=await Promise.all(batch.map(c=>checkImageOk(c.image)));
+    results.forEach((ok,j)=>{if(!ok) broken.push(batch[j])});
+    countEl.textContent=`Bilder werden geprüft... ${Math.min(i+BATCH,toCheck.length)}/${toCheck.length}`;
+  }
+
+  // Combine: no image + broken image
+  const all=[...noImage.map(c=>({card:c,reason:'kein Bild'})),...broken.map(c=>({card:c,reason:'kaputt'}))];
+  all.sort((a,b)=>(b.card.price||0)-(a.card.price||0));
+
+  countEl.textContent=`${noImage.length} ohne · ${broken.length} kaputt`;
+  if(!all.length){
+    list.innerHTML='<div style="text-align:center;padding:16px;color:var(--green);font-size:12px">✓ Alle Bilder OK</div>';
+    return;
+  }
+  list.innerHTML=all.map(({card:c,reason})=>{
     const enN=toEnName(cleanName(c.name))||cleanName(c.name);
     const info=extractSetInfo(c.name);
     const q=encodeURIComponent(enN+(info?' '+info.set+(info.num?' '+info.num:'')+' pokemon card':' pokemon card'));
+    const badge=reason==='kaputt'?'⚠️':'🚫';
+    const badgeColor=reason==='kaputt'?'var(--orange)':'var(--red)';
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid var(--border);margin-bottom:4px;font-size:12px">
+      <span style="color:${badgeColor};font-size:14px;flex-shrink:0" title="${reason}">${badge}</span>
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
-        <div style="color:var(--text3);font-size:10px">${c.category} • ${fmtE(c.price||0)}</div>
+        <div style="color:var(--text3);font-size:10px">${c.category} • ${fmtE(c.price||0)} • ${reason}</div>
       </div>
       <a href="https://www.google.com/search?tbm=isch&q=${q}" target="_blank"
         style="flex-shrink:0;font-size:10px;padding:4px 8px;border-radius:6px;background:var(--accent-light);color:var(--accent);text-decoration:none;font-weight:600">🔍</a>
@@ -1725,7 +1765,6 @@ function showMissingImages(){
         style="flex-shrink:0;font-size:10px;padding:4px 8px;border-radius:6px;background:var(--bg);color:var(--text2);border:1px solid var(--border);cursor:pointer;font-weight:600">Öffnen</button>
     </div>`;
   }).join('');
-  list.style.display='block';
 }
 
 // ═══════════════════════════════════════════════
