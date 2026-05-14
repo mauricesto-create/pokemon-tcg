@@ -601,10 +601,17 @@ canvas{max-width:100%!important}
     </div>
     <div class="right">›</div>
   </div>
+  <div class="settings-item" onclick="rematchAllSets()">
+    <div class="left">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
+      <div><div class="label">Sets neu zuordnen</div><div class="desc" id="setMatchStatus">Set-Namen aus Kartennamen neu extrahieren</div></div>
+    </div>
+    <div class="right">›</div>
+  </div>
   <div class="settings-item" onclick="matchAllImages()">
     <div class="left">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-      <div><div class="label">Sets + Bilder neu matchen</div><div class="desc" id="imageMatchStatus">Set-Namen + TCGdex-Artworks für alle Karten</div></div>
+      <div><div class="label">Bilder matchen</div><div class="desc" id="imageMatchStatus">TCGdex-Artworks für alle Karten laden</div></div>
     </div>
     <div class="right">›</div>
   </div>
@@ -2134,13 +2141,12 @@ async function debugFindCard(name){
   return log.join('\n');
 }
 
-async function matchAllImages(){
-  const status=document.getElementById('imageMatchStatus');
-
-  // Re-extract set info from card names (force, also for cards with stale setId/setName)
+async function rematchAllSets(){
+  const status=document.getElementById('setMatchStatus');
   status.textContent='Sets neu zuordnen...';
-  let setUpdated=0;
+  let setUpdated=0, checked=0;
   for(const c of cards){
+    checked++;
     if(!c.name) continue;
     const info=extractSetInfo(c.name);
     if(!info||!info.set) continue;
@@ -2152,8 +2158,15 @@ async function matchAllImages(){
       await updateCard(c);
       setUpdated++;
     }
+    if(checked%20===0) status.textContent=`Sets: ${checked}/${cards.length} geprüft, ${setUpdated} aktualisiert...`;
   }
-  if(setUpdated){await loadCards();renderDashboard();renderCollection();status.textContent=setUpdated+' Sets aktualisiert ✓'}
+  if(setUpdated){await loadCards();renderDashboard();renderCollection()}
+  status.textContent=setUpdated?`${setUpdated} Sets aktualisiert ✓`:'Alle Sets bereits aktuell ✓';
+  setTimeout(()=>{status.textContent='Set-Namen aus Kartennamen neu extrahieren'},5000);
+}
+
+async function matchAllImages(){
+  const status=document.getElementById('imageMatchStatus');
 
   // Sealed products get a generic box image — do this FIRST
   let sealedFixed=0;
@@ -2189,7 +2202,7 @@ async function matchAllImages(){
   const noImage=cards.filter(c=>!c.image);
   if(!noImage.length){
     status.textContent=(sealedFixed?sealedFixed+' Sealed ✓ — ':'')+'Alle Karten haben bereits Bilder!';
-    setTimeout(()=>{status.textContent='Set-Namen + TCGdex-Artworks für alle Karten'},3000);
+    setTimeout(()=>{status.textContent='TCGdex-Artworks für alle Karten laden'},3000);
     return;
   }
 
@@ -2255,7 +2268,7 @@ async function matchAllImages(){
     status.parentElement.parentElement.after(dbg);
     status.textContent=`Fertig! ${matched} Bilder, ${failed} nicht gefunden.`;
   }
-  setTimeout(()=>{status.textContent='Set-Namen + TCGdex-Artworks für alle Karten'},15000);
+  setTimeout(()=>{status.textContent='TCGdex-Artworks für alle Karten laden'},15000);
 }
 
 // Show grade field when Slabs selected
