@@ -956,7 +956,59 @@ const SET_NAMES={
   'base1':'Base Set','base2':'Jungle','base3':'Fossil','base4':'Base Set 2',
   'base5':'Team Rocket','gym1':'Gym Heroes','gym2':'Gym Challenge',
   'neo1':'Neo Genesis','neo2':'Neo Discovery','neo3':'Neo Revelation','neo4':'Neo Destiny',
-  'ecard1':'Expedition Base Set','ecard2':'Aquapolis','ecard3':'Skyridge'
+  'ecard1':'Expedition Base Set','ecard2':'Aquapolis','ecard3':'Skyridge',
+  // ═══ User-facing 3-letter codes (direct hits) ═══
+  'LOR':'Lost Origin','EVS':'Evolving Skies','CRZ':'Crown Zenith','BRS':'Brilliant Stars',
+  'FST':'Fusion Strike','CHP':'Champion’s Path','SHF':'Shining Fates','VIV':'Vivid Voltage',
+  'DAA':'Darkness Ablaze','RCL':'Rebel Clash','SSH':'Sword & Shield',
+  'CEC':'Cosmic Eclipse','UNM':'Unified Minds','UNB':'Unbroken Bonds','TEU':'Team Up','LOT':'Lost Thunder',
+  'CES':'Celestial Storm','FLI':'Forbidden Light','UPR':'Ultra Prism','CIN':'Crimson Invasion',
+  'BUS':'Burning Shadows','GRI':'Guardians Rising','SUM':'Sun & Moon',
+  'EVO':'Evolutions','STS':'Steam Siege','FCO':'Fates Collide','BKP':'BREAKpoint','BKT':'BREAKthrough',
+  'AOR':'Ancient Origins','ROS':'Roaring Skies','PRC':'Primal Clash','PHF':'Phantom Forces',
+  'FUF':'Furious Fists','FLF':'Flashfire','XY':'XY',
+  'LTR':'Legendary Treasures','PLB':'Plasma Blast','PLF':'Plasma Freeze','PLS':'Plasma Storm',
+  'BCR':'Boundaries Crossed','DRX':'Dragons Exalted','DEX':'Dark Explorers','NXD':'Next Destinies',
+  'NVI':'Noble Victories','EPO':'Emerging Powers',
+  'UD':'Undaunted','UL':'Unleashed','HS':'HeartGold SoulSilver',
+  'JU':'Jungle','FO':'Fossil','BS':'Base Set','SK':'Skyridge','AQ':'Aquapolis','EX':'Expedition Base Set',
+  'DS':'Delta Species','EM':'Emerald','UF':'Unseen Forces','HP':'Holon Phantoms','CG':'Crystal Guardians',
+  'DF':'Dragon Frontiers','PK':'Power Keepers',
+  'OBF':'Obsidian Flames','PAL':'Paldea Evolved','MEW151':'Pokémon 151','PAR':'Paradox Rift',
+  'TEF':'Temporal Forces','TWM':'Twilight Masquerade','SFA':'Shrouded Fable','SCR':'Stellar Crown','SSP':'Surging Sparks',
+  'SUR':'Surging Sparks','PRE':'Prismatic Evolutions','JTG':'Journey Together',
+  'SVP':'SV Black Star Promos','BWP':'BW Black Star Promos','BW':'BW Black Star Promos',
+  'SMP':'SM Black Star Promos','SM':'SM Black Star Promos','SWSHP':'SWSH Black Star Promos','XYP':'XY Black Star Promos',
+  'SM-P':'SM Black Star Promos','SV-P':'SV Black Star Promos','S-P':'SWSH Black Star Promos','BW-P':'BW Black Star Promos','XY-P':'XY Black Star Promos',
+  'GEN':'Generations','DET':'Detective Pikachu','PGO':'Pokémon GO','MEW':'Pokémon GO',
+  'PFL':'Paldean Fates','MEG':'Mega Generations','MEP':'Mega Promo',
+  // German abbreviations
+  'N1':'Neo Genesis','N2':'Neo Discovery','N3':'Neo Revelation','N4':'Neo Destiny',
+  'PJU':'Jungle','ROG':'Team Rocket','G1':'Gym Heroes','G2':'Gym Challenge',
+  'UNP':'Nintendo Black Star Promos','MFO':'Fossil','EXS':'Expedition Base Set','POP5':'POP Series 5','CEL':'Celebrations',
+  // JP collection / promo / special
+  'CP1':'Pokékyun Best Wishes','CP2':'Legendary Shiny Collection','CP3':'PokéKyun Collection',
+  'CP4':'Premium Champion Pack','CP5':'Mythical Pokémon Collection','CP6':'20th Anniversary',
+  // JP Sun & Moon specific
+  'sm1M':'Collection Moon','SM1M':'Collection Moon','sm1S':'Collection Sun','SM1S':'Collection Sun',
+  'SM1+':'Strength Expansion Pack: Sun & Moon',
+  'SM2L':'Alolan Moonlight','SM2K':'Awakened Heroes','SM3+':'To Have Seen The Battle Rainbow',
+  'SM4+':'GX Battle Boost','SM6a':'Dragon Storm','SM6b':'Champion Road','SM7a':'Thunderclap Spark',
+  'SM7b':'Fairy Rise','SM8a':'Dark Order','SM8b':'GX Ultra Shiny','SM9a':'Night Unison','SM9b':'Full Metal Wall',
+  'SM10a':'Sky-Splitting Charisma','SM10b':'Sky Legend',
+  // Pokémon Card 151 / Mega era JP
+  'sv1a':'Triplet Beat','sv1s':'Scarlet ex','sv1v':'Violet ex',
+  'sv2a':'Pokémon 151','sv2d':'Clay Burst','sv2p':'Snow Hazard',
+  'sv3a':'Raging Surf','sv4a':'Shiny Treasure ex','sv4k':'Ancient Roar','sv4m':'Future Flash',
+  'sv5a':'Crimson Haze','sv5k':'Wild Force','sv5m':'Cyber Judge',
+  'sv6':'Mask of Change','sv6a':'Night Wanderer','sv7':'Stellar Miracle','sv7a':'Paradigm Trigger',
+  'sv8':'Super Electric Breaker','sv8a':'Terastal Festival ex','sv9':'Battle Partners','sv9a':'Heat-Wave Arena',
+  'sv10':'Rocket Gang’s Glory','sv11':'Black Bolt','sv11w':'White Flare','sv11b':'Black Bolt','sv11B':'Black Bolt','sv11W':'White Flare',
+  'm2a':'Mega Dream ex','M2A':'Mega Dream ex','m1a':'Mega Brave','M1A':'Mega Brave','m1b':'Mega Symphonia','M1B':'Mega Symphonia',
+  // PtS / PT (Platinum / Diamond & Pearl Promos)
+  'PtS':'Platinum Special Pack','pts':'Platinum Special Pack',
+  // Misc holo era
+  'GBML':'Pikachu World Promo','gbml':'Pikachu World Promo'
 };
 function getSetName(setId){
   if(!setId) return '';
@@ -988,7 +1040,18 @@ const LANG_FLAG_CODES={JP:'1f1ef-1f1f5',DE:'1f1e9-1f1ea',EN:'1f1ec-1f1e7',FR:'1f
 function langFlag(code,size=16){const f=LANG_FLAG_CODES[code];if(!f)return code;return `<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${f}.png" alt="${code}" style="width:${size}px;height:${size}px;vertical-align:middle">`}
 function lookupSetName(code){
   if(!code) return null;
-  return SET_NAMES[code]||SET_NAMES[code.toLowerCase()]||SET_NAMES[code.toUpperCase()]||null;
+  // Direct lookup
+  let name=SET_NAMES[code]||SET_NAMES[code.toLowerCase()]||SET_NAMES[code.toUpperCase()];
+  if(name) return name;
+  // Indirect via SET_MAP (e.g. user code "LOR" → swsh11 → "Lost Origin")
+  if(typeof SET_MAP!=='undefined'){
+    const mapped=SET_MAP[code]||SET_MAP[code.toUpperCase()]||SET_MAP[code.toLowerCase()];
+    if(mapped&&mapped!==code){
+      name=SET_NAMES[mapped]||SET_NAMES[mapped.toLowerCase()]||SET_NAMES[mapped.toUpperCase()];
+      if(name) return name;
+    }
+  }
+  return null;
 }
 function displaySet(c){
   const isCategoryName=v=>CATEGORIES.some(([k])=>k===v);
@@ -1887,7 +1950,7 @@ const SET_MAP={
   'SM10A':'sm10','SM10B':'sm10','SM11A':'sm11','SM11B':'sm11',
   'SM12A':'sm12a',
   // JP older sets
-  'M2A':'xy7','PCG6':'ex11','PCG5':'ex10','PCG4':'ex9','PCG3':'ex8','PCG2':'ex7','PCG1':'ex6',
+  'PCG6':'ex11','PCG5':'ex10','PCG4':'ex9','PCG3':'ex8','PCG2':'ex7','PCG1':'ex6',
   'ADV4':'ex5','ADV3':'ex4','ADV2':'ex3','ADV1':'ex2',
   // Identity mappings — when Excel already uses TCGdex set IDs
   'SV1':'sv1','SV2':'sv2','SV3':'sv3','SV4':'sv4','SV5':'sv5','SV6':'sv6','SV7':'sv7','SV8':'sv8','SV9':'sv9',
