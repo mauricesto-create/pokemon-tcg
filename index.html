@@ -1722,18 +1722,26 @@ async function showMissingImages(){
   if(list.style.display!=='none'){list.style.display='none';return}
   list.style.display='block';
 
-  const noImage=cards.filter(c=>!c.image&&c.category!=='Sealed');
-  const toCheck=cards.filter(c=>c.image&&!c.image.startsWith('data:')&&c.category!=='Sealed');
+  const hasPhotos=c=>Array.isArray(c.photos)&&c.photos.length>0;
+  const noImage=cards.filter(c=>!c.image&&!hasPhotos(c)&&c.category!=='Sealed');
+  // Cards to check: image-URL OR photos (both can be broken)
+  const toCheck=cards.filter(c=>c.category!=='Sealed'&&((c.image&&!c.image.startsWith('data:'))||hasPhotos(c)));
 
   countEl.textContent='Bilder werden geprüft...';
   list.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text2);font-size:12px">Prüfe ${toCheck.length} Bilder...</div>`;
 
   // Check in batches to avoid hammering the browser
+  // A card is "broken" only if NEITHER image nor first photo loads
   const broken=[];
   const BATCH=20;
   for(let i=0;i<toCheck.length;i+=BATCH){
     const batch=toCheck.slice(i,i+BATCH);
-    const results=await Promise.all(batch.map(c=>checkImageOk(c.image)));
+    const results=await Promise.all(batch.map(async c=>{
+      // Prefer c.image, fallback to first photo
+      if(c.image&&await checkImageOk(c.image)) return true;
+      if(hasPhotos(c)&&await checkImageOk(c.photos[0])) return true;
+      return false;
+    }));
     results.forEach((ok,j)=>{if(!ok) broken.push(batch[j])});
     countEl.textContent=`Bilder werden geprüft... ${Math.min(i+BATCH,toCheck.length)}/${toCheck.length}`;
   }
