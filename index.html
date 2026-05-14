@@ -2691,7 +2691,10 @@ async function loadCustomCategories(){
 }
 
 function refreshCategorySelects(){
-  ['scanCategory','addCategory','manualCategory'].forEach(id=>fillSelect(id,CATEGORIES));
+  ['scanCategory','addCategory','manualCategory','editCardCategory'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) fillSelect(id,CATEGORIES);
+  });
 }
 
 function openCategoryManager(){
@@ -2739,15 +2742,24 @@ async function saveNewCategory(){
   if(CATEGORIES.find(([v])=>v===name)){showToast('Kategorie existiert bereits','var(--red)');return}
   const condType=document.getElementById('catCondType').value;
   const cat={name,icon:selectedCatIcon,color:selectedCatColor,condType};
-  customCategories.push(cat);
-  CAT_ICONS[name]=selectedCatIcon;
-  CAT_COLORS[name]=selectedCatColor;
-  CATEGORIES.push([name,name]);
-  await db.collection('users').doc(uid).set({customCategories},{merge:true});
-  refreshCategorySelects();
-  renderCustomCatList();
-  document.getElementById('catName').value='';
-  showToast('Kategorie "'+name+'" erstellt');
+  try{
+    customCategories.push(cat);
+    CAT_ICONS[name]=selectedCatIcon;
+    CAT_COLORS[name]=selectedCatColor;
+    CATEGORIES.push([name,name]);
+    await db.collection('users').doc(uid).set({customCategories},{merge:true});
+    refreshCategorySelects();
+    renderCustomCatList();
+    document.getElementById('catName').value='';
+    showToast('Kategorie "'+name+'" erstellt');
+  }catch(err){
+    // Rollback local state on Firestore error
+    customCategories.pop();
+    delete CAT_ICONS[name];
+    delete CAT_COLORS[name];
+    CATEGORIES=CATEGORIES.filter(([v])=>v!==name);
+    showToast('Fehler: '+err.message,'var(--red)');
+  }
 }
 
 async function deleteCustomCategory(idx){
@@ -3174,8 +3186,20 @@ auth.onAuthStateChanged(async user=>{
     // Start real-time sync
     startCardListener();
     loadGeminiKey();
-    loadCustomCategories();
+    await loadCustomCategories();
     await loadCards();
+    // One-time fix: Ensure "Mega Dream" category exists + move all m2a cards from Random Binder
+    if(!customCategories.find(c=>c.name==='Mega Dream')){
+      const megaCat={name:'Mega Dream',icon:'🐉',color:'#a855f7',condType:'card'};
+      customCategories.push(megaCat);
+      CAT_ICONS['Mega Dream']='🐉';
+      CAT_COLORS['Mega Dream']='#a855f7';
+      if(!CATEGORIES.find(([v])=>v==='Mega Dream')) CATEGORIES.push(['Mega Dream','Mega Dream']);
+      try{await db.collection('users').doc(uid).set({customCategories},{merge:true})}catch(e){}
+      refreshCategorySelects();
+    }
+    const m2aFix=cards.filter(c=>c.category==='Random Binder'&&c.name&&/\bm2a\b/i.test(c.name));
+    m2aFix.forEach(c=>c.category='Mega Dream');
     // Migrate old condition values
     const condMap={'EX':'EXC','Excellent':'EXC','Near Mint':'NM','Good':'GD','Light Played':'LP','Poor':'PO','Heavy Played':'HP','Damaged':'DMG','MP':'GD','HP':'LP','DMG':'PO'};
     const toFix=cards.filter(c=>c.condition&&condMap[c.condition]);
@@ -3210,7 +3234,7 @@ auth.onAuthStateChanged(async user=>{
         setFix.push(c);
       }
     }
-    const allFix=[...toFix,...sealedFix,...sealedImgFix,...masterFix,...gradeFix,...langFix,...setFix];
+    const allFix=[...toFix,...sealedFix,...sealedImgFix,...masterFix,...gradeFix,...langFix,...setFix,...m2aFix];
     if(allFix.length){bulkMode=true;for(const c of toFix){c.condition=condMap[c.condition]};for(const c of allFix){await updateCard(c)}bulkMode=false;await loadCards()}
     renderDashboard();
 
