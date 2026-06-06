@@ -3409,13 +3409,13 @@ auth.onAuthStateChanged(async user=>{
     await loadCustomCategories();
     loadSetDb(); // fire-and-forget, cached in localStorage
     await loadCards();
-    // One-time fix: Ensure "Mega Dream" category exists + move all m2a cards from Random Binder
-    if(!customCategories.find(c=>c.name==='Mega Dream')){
-      const megaCat={name:'Mega Dream',icon:'🐉',color:'#a855f7',condType:'card'};
-      customCategories.push(megaCat);
-      CAT_ICONS['Mega Dream']='🐉';
-      CAT_COLORS['Mega Dream']='#a855f7';
-      if(!CATEGORIES.find(([v])=>v==='Mega Dream')) CATEGORIES.push(['Mega Dream','Mega Dream']);
+    // One-time reverse: Remove "Mega Dream" category if it still exists
+    const megaIdx=customCategories.findIndex(c=>c.name==='Mega Dream');
+    if(megaIdx>=0){
+      customCategories.splice(megaIdx,1);
+      delete CAT_ICONS['Mega Dream'];
+      delete CAT_COLORS['Mega Dream'];
+      CATEGORIES=CATEGORIES.filter(([v])=>v!=='Mega Dream');
       try{await db.collection('users').doc(uid).set({customCategories},{merge:true})}catch(e){}
       refreshCategorySelects();
     }
@@ -3429,8 +3429,9 @@ auth.onAuthStateChanged(async user=>{
       try{await db.collection('users').doc(uid).set({customCategories},{merge:true})}catch(e){}
       refreshCategorySelects();
     }
-    const m2aFix=cards.filter(c=>c.category==='Random Binder'&&c.name&&/\bm2a\b/i.test(c.name));
-    m2aFix.forEach(c=>c.category='Mega Dream');
+    // Reverse: Move all cards from Mega Dream back to Random Binder
+    const m2aFix=cards.filter(c=>c.category==='Mega Dream');
+    m2aFix.forEach(c=>c.category='Random Binder');
     // Promote first photo to c.image if c.image is empty but photos[0] is a valid URL
     const photoToImage=cards.filter(c=>!c.image&&Array.isArray(c.photos)&&c.photos.length>0&&typeof c.photos[0]==='string'&&c.photos[0].trim().length>10);
     photoToImage.forEach(c=>{c.image=c.photos[0];c.manualImage=true});
