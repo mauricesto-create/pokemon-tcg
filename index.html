@@ -2975,7 +2975,10 @@ async function saveNewCategory(){
     delete CAT_ICONS[name];
     delete CAT_COLORS[name];
     CATEGORIES=CATEGORIES.filter(([v])=>v!==name);
-    showToast('Fehler: '+err.message,'var(--red)');
+    const msg=err.code==='permission-denied'
+      ?'Firestore-Rules erlauben kein Schreiben aufs User-Doc. Siehe Firebase Console → Firestore → Regeln.'
+      :'Fehler: '+(err.message||err.code||'Unbekannt');
+    showToast(msg,'var(--red)');
   }
 }
 
@@ -3413,6 +3416,16 @@ auth.onAuthStateChanged(async user=>{
       CAT_ICONS['Mega Dream']='🐉';
       CAT_COLORS['Mega Dream']='#a855f7';
       if(!CATEGORIES.find(([v])=>v==='Mega Dream')) CATEGORIES.push(['Mega Dream','Mega Dream']);
+      try{await db.collection('users').doc(uid).set({customCategories},{merge:true})}catch(e){}
+      refreshCategorySelects();
+    }
+    // One-time fix: Ensure "Trade Binder" category exists
+    if(!customCategories.find(c=>c.name==='Trade Binder')){
+      const tradeCat={name:'Trade Binder',icon:'🤝',color:'#10b981',condType:'card'};
+      customCategories.push(tradeCat);
+      CAT_ICONS['Trade Binder']='🤝';
+      CAT_COLORS['Trade Binder']='#10b981';
+      if(!CATEGORIES.find(([v])=>v==='Trade Binder')) CATEGORIES.push(['Trade Binder','Trade Binder']);
       try{await db.collection('users').doc(uid).set({customCategories},{merge:true})}catch(e){}
       refreshCategorySelects();
     }
