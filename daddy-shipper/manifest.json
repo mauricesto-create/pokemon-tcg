@@ -1,8 +1,8 @@
 {
-  "version": "3.1.3",
-  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.1.3/DaddyShipperSetup-3.1.3.exe",
-  "sha256": "634dbf7985618e2243161db9bcc1986affd933f65072a1960efe81fd88901e8d",
-  "release_notes": "Bugfix Live-Mode: Polling laeuft jetzt zuverlaessig nach Seed (Thread-Fix) + ausfuehrliches Logging",
-  "released_at": "2026-06-07T11:26:53.844129+00:00",
-  "size_bytes": 57994207
+  "version": "3.1.4",
+  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.1.4/DaddyShipperSetup-3.1.4.exe",
+  "sha256": "d1c4f57ac8cbb2e16005a6477620f47390b33e3bfef83b428b62222e0d514847",
+  "release_notes": "Theme-Wechsel ohne App-Neustart (in-place, ca. 100ms)",
+  "released_at": "2026-06-07T11:40:14.329851+00:00",
+  "size_bytes": 57986739
 }
