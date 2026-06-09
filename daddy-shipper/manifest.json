@@ -1,8 +1,8 @@
 {
-  "version": "3.1.6",
-  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.1.6/DaddyShipperSetup-3.1.6.exe",
-  "sha256": "0e15d0f4dc269eafdd2b7b5088034f9305f2b3f0a7538feab786f97468b06d45",
-  "release_notes": "Live-Mode Item-Label robuster: Fallback bei leeren lineItems, lautes Feedback bei Drucker-Problem, ausfuehrliches Logging",
-  "released_at": "2026-06-07T18:10:51.851775+00:00",
-  "size_bytes": 57993861
+  "version": "3.1.7",
+  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.1.7/DaddyShipperSetup-3.1.7.exe",
+  "sha256": "ffbf56bc5c8e3ddbf57ce52627ededffde8145e4ca36bf0f3d5b2f6bea2351a9",
+  "release_notes": "Live-Mode: neue Bestellungen erscheinen jetzt automatisch in der Liste (kein manuelles Aktualisieren mehr noetig)",
+  "released_at": "2026-06-09T12:17:13.997506+00:00",
+  "size_bytes": 57992568
 }
