@@ -1,8 +1,8 @@
 {
-  "version": "3.1.9",
-  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.1.9/DaddyShipperSetup-3.1.9.exe",
-  "sha256": "e454dde009eb3172f7bc39434af50590130f9a1e3c68c0a89d4983b7ba5107e0",
-  "release_notes": "Quota-Schutz: Live-Polls machen nur noch 1 eBay-Call (Trading-Anreicherung gespart). 24h-Dauerbetrieb sicher. Label-Zeit aus creationDate in Berliner Zeit.",
-  "released_at": "2026-06-09T12:42:21.442862+00:00",
-  "size_bytes": 57991376
+  "version": "3.1.10",
+  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.1.10/DaddyShipperSetup-3.1.10.exe",
+  "sha256": "a858f9034109a725b1970c156457f6b807bf059c32c522e934afe501a189d91c",
+  "release_notes": "Adress-Fix (von KaraCardz uebernommen): Strassen mit angeklebter Hausnummer (z.B. 'Schmiedegasse 2') werden jetzt sauber getrennt - DHL akzeptiert das Label.",
+  "released_at": "2026-06-13T19:29:33.850066+00:00",
+  "size_bytes": 57990363
 }
