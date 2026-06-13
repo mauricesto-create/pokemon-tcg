@@ -1,8 +1,8 @@
 {
-  "version": "3.1.10",
-  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.1.10/DaddyShipperSetup-3.1.10.exe",
-  "sha256": "a858f9034109a725b1970c156457f6b807bf059c32c522e934afe501a189d91c",
-  "release_notes": "Adress-Fix (von KaraCardz uebernommen): Strassen mit angeklebter Hausnummer (z.B. 'Schmiedegasse 2') werden jetzt sauber getrennt - DHL akzeptiert das Label.",
-  "released_at": "2026-06-13T19:29:33.850066+00:00",
-  "size_bytes": 57990363
+  "version": "3.1.11",
+  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.1.11/DaddyShipperSetup-3.1.11.exe",
+  "sha256": "7ce37b9dceeb5e37766eb59d8ce0188805d8d9ca1ca5c1dcff1b77a8594f6e83",
+  "release_notes": "Artikel-Label zeigt jetzt den Verkaufspreis oben rechts (z.B. 3,00 EUR).",
+  "released_at": "2026-06-13T19:38:13.265270+00:00",
+  "size_bytes": 57996217
 }
