@@ -1,8 +1,8 @@
 {
-  "version": "3.2",
-  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.2/DaddyShipperSetup-3.2.exe",
-  "sha256": "eae04363e032ad5ec978cdaab8fc96c3941466edce0db28c29875b9c5a08dae0",
-  "release_notes": "Grosses Qualitaets-Update: Live-Status-Anzeige gefixt, korrekte Zeitzonen, Dark-Look jetzt Standard, App schlanker und schneller",
-  "released_at": "2026-07-04T14:14:31.418833+00:00",
-  "size_bytes": 56863154
+  "version": "3.2.1",
+  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.2.1/DaddyShipperSetup-3.2.1.exe",
+  "sha256": "312fa89e72b979b32c8662cb4f2e96fa5d3b8b4306cf4d5736dfd7e1efc9cdae",
+  "release_notes": "Fix: Auswahl-Optik in der Kaeuferliste (dunkle Textkaesten) + Testauftraege bleiben beim Live-Refresh erhalten",
+  "released_at": "2026-07-04T14:35:49.982892+00:00",
+  "size_bytes": 56861393
 }
