@@ -2874,12 +2874,12 @@ function closeBatch(){
 }
 
 function getCondOptions(category){
-  if(category==='Slabs') return [['PSA 10','PSA 10'],['PSA 9','PSA 9'],['PSA 8','PSA 8'],['CGC Pristine 10','CGC Pristine 10']];
+  if(category==='Slabs') return [['PSA 10','PSA 10'],['PSA 9','PSA 9'],['PSA 8','PSA 8'],['PSA 7','PSA 7'],['CGC Pristine 10','CGC Pristine 10']];
   if(category==='Sealed'||category==='Sealed Promos') return [['Sealed','Sealed']];
   // Check custom category condType
   const custom=customCategories.find(c=>c.name===category);
   if(custom){
-    if(custom.condType==='slab') return [['PSA 10','PSA 10'],['PSA 9','PSA 9'],['PSA 8','PSA 8'],['CGC Pristine 10','CGC Pristine 10']];
+    if(custom.condType==='slab') return [['PSA 10','PSA 10'],['PSA 9','PSA 9'],['PSA 8','PSA 8'],['PSA 7','PSA 7'],['CGC Pristine 10','CGC Pristine 10']];
     if(custom.condType==='sealed') return [['Sealed','Sealed']];
   }
   return [['NM','NM'],['EXC','EXC'],['GD','GD'],['LP','LP'],['PL','PL'],['PO','PO']];
