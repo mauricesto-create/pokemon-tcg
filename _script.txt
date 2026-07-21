@@ -1,0 +1,1516 @@
+
+// ═══════════════════════════════════════════════
+// DB & State
+// ═══════════════════════════════════════════════
+let db;
+let cards = [];
+let charts = {};
+let pendingApiCard = null;
+let activeFilter = 'Alle';
+
+const CAT_COLORS = {'Slabs':'#8b5cf6','Binder':'#3b82f6','Sealed':'#10b981','Random Binder':'#f59e0b',
+  'Eevee Binder':'#ec4899','151 Master':'#06b6d4','Terastal Master':'#6366f1','Sealed Promos':'#94a3b8'};
+const LANG_COLORS = {JP:'#ef4444',DE:'#3b82f6',EN:'#10b981',FR:'#f59e0b',CN:'#8b5cf6',CH:'#a855f7'};
+const CAT_ICONS={'Slabs':'🏅','Binder':'📒','Sealed':'🎴','Random Binder':'🃏',
+  'Eevee Binder':'🌙','151 Master':'🔴','Terastal Master':'💎','Sealed Promos':'⭐'};
+const TCGDEX='https://api.tcgdex.net/v2';
+function dedupeById(arr){const s=new Set();return arr.filter(c=>s.has(c.id)?false:!!s.add(c.id))}
+function imgSrc(url){return url?(url.startsWith('data:')||url.endsWith('.png')||url.endsWith('.jpg')||url.endsWith('.webp')||url.includes('pricecharting.com')?url:url+'/low.webp'):''}
+const IMG_ERR='onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'🃏\'"';
+
+function fmt(n){return n.toLocaleString('de-DE',{minimumFractionDigits:0,maximumFractionDigits:0})}
+function fmtE(n){return fmt(n)+'\u2009€'}
+
+// ─── IndexedDB ───
+function openDB(){
+  return new Promise((ok,fail)=>{
+    const req=indexedDB.open('pokevault',2);
+    req.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains('cards'))
+        d.createObjectStore('cards',{keyPath:'id',autoIncrement:true});
+    };
+    req.onsuccess=e=>{db=e.target.result;ok(db)};
+    req.onerror=e=>fail(e);
+  });
+}
+
+async function loadCards(){
+  return new Promise(ok=>{
+    const tx=db.transaction('cards','readonly');
+    const store=tx.objectStore('cards');
+    const req=store.getAll();
+    req.onsuccess=()=>{cards=req.result;ok(cards)};
+  });
+}
+
+async function addCard(card){
+  return new Promise(ok=>{
+    const tx=db.transaction('cards','readwrite');
+    tx.objectStore('cards').add(card);
+    tx.oncomplete=()=>ok();
+  });
+}
+
+async function deleteCard(id){
+  return new Promise(ok=>{
+    const tx=db.transaction('cards','readwrite');
+    tx.objectStore('cards').delete(id);
+    tx.oncomplete=()=>ok();
+  });
+}
+
+async function updateCard(card){
+  return new Promise(ok=>{
+    const tx=db.transaction('cards','readwrite');
+    tx.objectStore('cards').put(card);
+    tx.oncomplete=()=>ok();
+  });
+}
+
+async function clearDB(){
+  return new Promise(ok=>{
+    const tx=db.transaction('cards','readwrite');
+    tx.objectStore('cards').clear();
+    tx.oncomplete=()=>ok();
+  });
+}
+
+// ═══════════════════════════════════════════════
+// Navigation
+// ═══════════════════════════════════════════════
+document.querySelectorAll('.nav-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.view).classList.add('active');
+    if(tab.dataset.view==='viewDashboard') renderDashboard();
+    if(tab.dataset.view==='viewCollection') renderCollection();
+  });
+});
+
+// ═══════════════════════════════════════════════
+// Dashboard
+// ═══════════════════════════════════════════════
+function renderDashboard(){
+  Object.values(charts).forEach(c=>c.destroy());
+  charts={};
+
+  document.getElementById('dashDate').textContent=
+    'Stand: '+new Date().toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'});
+
+  const total=cards.reduce((s,c)=>s+(c.price||0),0);
+  const slabs=cards.filter(c=>c.category==='Slabs');
+  const sealed=cards.filter(c=>c.category==='Sealed');
+  const slabVal=slabs.reduce((s,c)=>s+(c.price||0),0);
+  const sealedVal=sealed.reduce((s,c)=>s+(c.price||0),0);
+
+  document.getElementById('dashKpis').innerHTML=`
+    <div class="kpi"><div class="kpi-label">Gesamtwert</div><div class="kpi-val" style="color:var(--accent)">${fmtE(total)}</div><div class="kpi-sub">${cards.length} Items</div></div>
+    <div class="kpi"><div class="kpi-label">Karten</div><div class="kpi-val" style="color:var(--green)">${cards.filter(c=>c.category!=='Sealed').length}</div><div class="kpi-sub">Alle Karten</div></div>
+    <div class="kpi"><div class="kpi-label">Slabs</div><div class="kpi-val" style="color:var(--purple)">${slabs.length}</div><div class="kpi-sub">${fmtE(slabVal)}</div></div>
+    <div class="kpi"><div class="kpi-label">Sealed</div><div class="kpi-val" style="color:var(--orange)">${sealed.length}</div><div class="kpi-sub">${fmtE(sealedVal)}</div></div>
+  `;
+
+  // Category breakdown
+  const catMap={};
+  cards.forEach(c=>{
+    if(!catMap[c.category]) catMap[c.category]={count:0,value:0};
+    catMap[c.category].count++;
+    catMap[c.category].value+=(c.price||0);
+  });
+  const catArr=Object.entries(catMap).sort((a,b)=>b[1].value-a[1].value);
+
+  document.getElementById('dashCats').innerHTML=catArr.map(([name,d])=>`
+    <div class="cat-item" onclick="filterCollection('${name}')">
+      <div class="cat-icon" style="background:${CAT_COLORS[name]||'#94a3b8'}20;color:${CAT_COLORS[name]||'#94a3b8'}">${CAT_ICONS[name]||'📋'}</div>
+      <div class="cat-info"><div class="cat-name">${name}</div><div class="cat-meta">${d.count} Items</div></div>
+      <div class="cat-val"><div class="price">${fmtE(d.value)}</div></div>
+      <div class="cat-arrow">›</div>
+    </div>`).join('');
+
+  // Top 5
+  const top5=[...cards].sort((a,b)=>(b.price||0)-(a.price||0)).slice(0,5);
+  document.getElementById('dashTop5').innerHTML=top5.map((c,i)=>`
+    <div class="card-item" onclick="openModal(${c.id})">
+      <div class="card-thumb">${c.photos&&c.photos.length?`<img src="${c.photos[0]}" alt="" loading="lazy">`:c.image?`<img src="${imgSrc(c.image)}" alt="" loading="lazy">`:'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--card),var(--bg))"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>'}</div>
+      <div class="card-details">
+        <div class="name">${c.name}</div>
+        <div class="set">${c.setName||c.setId||''}</div>
+        <div class="badges">
+          ${c.grade?`<span class="badge badge-grade">${c.grade}</span>`:''}
+          <span class="badge badge-lang">${c.language}</span>
+        </div>
+      </div>
+      <div class="card-price"><div class="val">${fmtE(c.price||0)}</div></div>
+    </div>`).join('');
+
+  // Donut chart
+  document.getElementById('donutVal').textContent=fmtE(total);
+  if(catArr.length){
+    charts.donut=new Chart(document.getElementById('chartDonut'),{
+      type:'doughnut',
+      data:{labels:catArr.map(e=>e[0]),datasets:[{data:catArr.map(e=>e[1].value),
+        backgroundColor:catArr.map(e=>CAT_COLORS[e[0]]||'#94a3b8'),borderWidth:0,hoverOffset:4}]},
+      options:{cutout:'72%',plugins:{legend:{position:'bottom',labels:{font:{size:10,weight:'600'},padding:10,usePointStyle:true}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmtE(ctx.parsed)}`}}}}
+    });
+  }
+
+  // Language chart
+  const langMap={};
+  cards.forEach(c=>{langMap[c.language]=(langMap[c.language]||0)+1});
+  const langArr=Object.entries(langMap).sort((a,b)=>b[1]-a[1]);
+  if(langArr.length){
+    charts.lang=new Chart(document.getElementById('chartLang'),{
+      type:'bar',
+      data:{labels:langArr.map(e=>e[0]),datasets:[{data:langArr.map(e=>e[1]),
+        backgroundColor:langArr.map(e=>LANG_COLORS[e[0]]||'#94a3b8'),borderRadius:6,barPercentage:.6}]},
+      options:{indexAxis:'y',plugins:{legend:{display:false}},
+        scales:{x:{grid:{display:false},ticks:{font:{size:11,weight:'600'}}},y:{grid:{display:false},ticks:{font:{size:12,weight:'700'}}}}}
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════
+// Collection
+// ═══════════════════════════════════════════════
+function renderCollection(){
+  const search=(document.getElementById('collSearch').value||'').toLowerCase();
+  const cats=['Alle',...new Set(cards.map(c=>c.category))];
+
+  document.getElementById('collChips').innerHTML=cats.map(c=>
+    `<button class="chip${activeFilter===c?' active':''}" onclick="activeFilter='${c}';renderCollection()">${c}</button>`
+  ).join('');
+
+  let filtered=cards;
+  if(activeFilter!=='Alle') filtered=filtered.filter(c=>c.category===activeFilter);
+  if(search) filtered=filtered.filter(c=>c.name.toLowerCase().includes(search));
+  filtered.sort((a,b)=>(b.price||0)-(a.price||0));
+
+  if(!filtered.length){
+    document.getElementById('collCards').innerHTML=`
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/></svg>
+        <h3>Keine Karten gefunden</h3>
+        <p>Füge Karten hinzu oder importiere deine Excel-Datei.</p>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('collCards').innerHTML=filtered.map(c=>`
+    <div class="card-item" onclick="openModal(${c.id})">
+      <div class="card-thumb">${c.photos&&c.photos.length?`<img src="${c.photos[0]}" alt="" loading="lazy">`:c.image?`<img src="${imgSrc(c.image)}" alt="" loading="lazy">`:'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--card),var(--bg))"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>'}</div>
+      <div class="card-details">
+        <div class="name">${c.name}</div>
+        <div class="set">${c.setName||c.setId||c.category}</div>
+        <div class="badges">
+          <span class="badge badge-lang">${c.language}</span>
+          ${c.grade?`<span class="badge badge-grade">${c.grade}</span>`:''}
+          ${c.condition&&c.condition!=='Sealed'?`<span class="badge badge-cond">${c.condition}</span>`:''}
+        </div>
+      </div>
+      <div class="card-price">
+        <div class="val">${fmtE(c.price||0)}</div>
+        ${c.priceTrend!=null?`<div class="trend ${c.priceTrend>=0?'trend-up':'trend-down'}">${c.priceTrend>=0?'▲':'▼'} ${Math.abs(c.priceTrend).toFixed(1)}%</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+document.getElementById('collSearch').addEventListener('input', renderCollection);
+
+function filterCollection(cat){
+  activeFilter=cat;
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelector('[data-view="viewCollection"]').classList.add('active');
+  document.getElementById('viewCollection').classList.add('active');
+  renderCollection();
+}
+
+// ═══════════════════════════════════════════════
+// Add Card - TCGdex API Search
+// ═══════════════════════════════════════════════
+let searchTimeout;
+document.getElementById('apiSearch').addEventListener('input',e=>{
+  clearTimeout(searchTimeout);
+  const q=e.target.value.trim();
+  if(q.length<2){document.getElementById('apiResults').innerHTML='';return}
+  searchTimeout=setTimeout(()=>searchTCGdex(q),400);
+});
+
+async function searchTCGdex(query){
+  document.getElementById('apiResults').innerHTML='<div class="spinner"></div>';
+  try{
+    if(query.includes('-')){
+      const results=await Promise.all(['de','en','ja'].map(l=>fetch(`${TCGDEX}/${l}/cards/${query}`)));
+      for(const r of results){if(r.ok){renderApiResults([await r.json()]);return;}}
+    }
+    const numMatch=query.match(/^(.+?)\s+(\d+)$/);
+    const nameQuery=numMatch?numMatch[1].trim():query;
+    const cardNum=numMatch?numMatch[2]:null;
+
+    const [deRes,enRes]=await Promise.all(['de','en'].map(async lang=>{
+      const r=await fetch(`${TCGDEX}/${lang}/cards?name=${encodeURIComponent(nameQuery)}`);
+      return r.ok?(await r.json()).map(c=>({...c,_lang:lang})):[];
+    }));
+    const rawResults=dedupeById([...deRes,...enRes]);
+    let allResults=cardNum?rawResults.filter(c=>c.id?.endsWith('-'+cardNum)):rawResults;
+    if(!allResults.length&&cardNum) allResults=rawResults;
+
+    const detailed=await Promise.all(
+      allResults.slice(0,20).map(async c=>{
+        try{const dr=await fetch(`${TCGDEX}/${c._lang||'de'}/cards/${c.id}`);return dr.ok?await dr.json():c}catch{return c}
+      })
+    );
+    renderApiResults(detailed);
+  }catch(e){
+    document.getElementById('apiResults').innerHTML=`<div class="empty-state"><h3>Fehler bei der Suche</h3><p>${e.message}</p></div>`;
+  }
+}
+
+function renderApiResults(results){
+  if(!results.length){
+    document.getElementById('apiResults').innerHTML='<div class="empty-state"><h3>Keine Ergebnisse</h3><p>Versuche einen anderen Suchbegriff.</p></div>';
+    return;
+  }
+  document.getElementById('apiResults').innerHTML=results.map(c=>{
+    const price=c.pricing?.cardmarket?.trend;
+    const img=c.image;
+    return `<div class="api-card" onclick='selectApiCard(${JSON.stringify(c).replace(/'/g,"&#39;")})'>
+      ${img?`<img src="${imgSrc(img)}" alt="" loading="lazy">`:'<div style="width:60px;height:84px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">🃏</div>'}
+      <div class="info">
+        <h4>${c.name||c.id}</h4>
+        <p>${c.set?.name||''} ${c.set?.id?'('+c.set.id+')':''}</p>
+        <p>${c.rarity||''}</p>
+        ${price?`<div class="api-price">Trend: ${price.toFixed(2)} €</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectApiCard(card){
+  pendingApiCard=card;
+  document.getElementById('addStep1').style.display='none';
+  document.getElementById('addStep2').style.display='block';
+  document.getElementById('addPreview').innerHTML=card.image?
+    `<img src="${imgSrc(card.image)}" style="width:100%;height:100%;object-fit:cover">`:'🃏';
+  document.getElementById('addCardName').textContent=card.name||card.id;
+  document.getElementById('addCardSet').textContent=(card.set?.name||'')+' '+(card.localId||'');
+  const price=card.pricing?.cardmarket?.trend;
+  document.getElementById('addCardPrice').textContent=price?`Cardmarket Trend: ${price.toFixed(2)} €`:'Kein Preis verfügbar';
+  document.getElementById('addPrice').value=price?price.toFixed(2):'';
+}
+
+function showAddStep(n){
+  document.getElementById('addStep1').style.display=n===1?'block':'none';
+  document.getElementById('addStep2').style.display=n===2?'block':'none';
+}
+
+// ═══════════════════════════════════════════════
+// Photo Capture & Gallery
+// ═══════════════════════════════════════════════
+let addPhotoData = null;
+
+function resizeImage(file, maxW=800){
+  return new Promise(ok=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        let w=img.width, h=img.height;
+        if(w>maxW){h=h*(maxW/w);w=maxW}
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        ok(canvas.toDataURL('image/webp',0.8));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function capturePhoto(){document.getElementById('cameraInput').click()}
+function pickPhoto(){document.getElementById('galleryInput').click()}
+
+document.getElementById('cameraInput').addEventListener('change',async e=>{
+  if(!e.target.files[0])return;
+  addPhotoData=await resizeImage(e.target.files[0]);
+  showAddPhotoPreview();
+  e.target.value='';
+});
+document.getElementById('galleryInput').addEventListener('change',async e=>{
+  if(!e.target.files[0])return;
+  addPhotoData=await resizeImage(e.target.files[0]);
+  showAddPhotoPreview();
+  e.target.value='';
+});
+
+function showAddPhotoPreview(){
+  const el=document.getElementById('addPhotoPreview');
+  document.getElementById('addPhotoImg').src=addPhotoData;
+  el.style.display='block';
+}
+function removeAddPhoto(){
+  addPhotoData=null;
+  document.getElementById('addPhotoPreview').style.display='none';
+  document.getElementById('addPhotoImg').src='';
+}
+
+function fetchImageAsData(url){
+  return new Promise(resolve=>{
+    // Try 1: Load with CORS to convert to data URL (works for most APIs)
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>{
+      try{
+        const c=document.createElement('canvas');
+        c.width=img.naturalWidth;c.height=img.naturalHeight;
+        c.getContext('2d').drawImage(img,0,0);
+        resolve(c.toDataURL('image/jpeg',0.9));
+      }catch{
+        // Canvas tainted — try proxy
+        tryProxy(url,resolve);
+      }
+    };
+    img.onerror=()=>tryProxy(url,resolve);
+    img.src=url;
+  });
+}
+function tryProxy(url,resolve){
+  const proxy='https://corsproxy.io/?'+encodeURIComponent(url);
+  const img=new Image();
+  img.crossOrigin='anonymous';
+  img.onload=()=>{
+    try{
+      const c=document.createElement('canvas');
+      c.width=img.naturalWidth;c.height=img.naturalHeight;
+      c.getContext('2d').drawImage(img,0,0);
+      resolve(c.toDataURL('image/jpeg',0.9));
+    }catch{
+      // Proxy loaded but canvas still tainted — test if URL works as img src
+      testDirectUrl(url,resolve);
+    }
+  };
+  img.onerror=()=>testDirectUrl(url,resolve);
+  img.src=proxy;
+}
+function testDirectUrl(url,resolve){
+  // Last resort: check if URL loads without CORS (for display only, not offline)
+  const img=new Image();
+  img.onload=()=>resolve(url);
+  img.onerror=()=>{alert('Bild konnte nicht geladen werden. Tipp: Rechtsklick auf das Bild → "Bild kopieren", dann hier einfügen (Strg+V).');resolve(null)};
+  img.src=url;
+}
+
+// Paste support — Strg+V / Cmd+V to paste images from clipboard
+document.addEventListener('paste',async e=>{
+  const items=e.clipboardData?.items;
+  if(!items) return;
+  for(const item of items){
+    if(!item.type.startsWith('image/')) continue;
+    e.preventDefault();
+    const blob=item.getAsFile();
+    const data=await resizeImage(blob);
+    // If modal is open, add to that card
+    if(currentModalCardId){
+      await addPhotoToCard(currentModalCardId,data);
+      return;
+    }
+    // If on add-card view, set as photo
+    if(document.getElementById('viewAdd').classList.contains('active')){
+      addPhotoData=data;
+      showAddPhotoPreview();
+      return;
+    }
+  }
+});
+
+async function promptImageUrl(){
+  const url=prompt('Bild-URL einfügen:');
+  if(!url||!url.trim()) return;
+  const data=await fetchImageAsData(url.trim());
+  if(!data) return;
+  addPhotoData=data;
+  showAddPhotoPreview();
+}
+
+async function modalPromptImageUrl(){
+  if(!currentModalCardId) return;
+  const url=prompt('Bild-URL einfügen:');
+  if(!url||!url.trim()) return;
+  const data=await fetchImageAsData(url.trim());
+  if(!data) return;
+  const c=cards.find(x=>x.id===currentModalCardId);
+  if(!c) return;
+  if(!c.photos) c.photos=[];
+  c.photos.push(data);
+  await updateCard(c);
+  await loadCards();
+  renderModalPhotos(c);
+}
+
+// Modal photo capture
+let currentModalCardId=null;
+
+function modalCapturePhoto(){document.getElementById('modalCameraInput').click()}
+function modalPickPhoto(){document.getElementById('modalGalleryInput').click()}
+
+document.getElementById('modalCameraInput').addEventListener('change',async e=>{
+  if(!e.target.files[0]||!currentModalCardId)return;
+  const data=await resizeImage(e.target.files[0]);
+  await addPhotoToCard(currentModalCardId,data);
+  e.target.value='';
+});
+document.getElementById('modalGalleryInput').addEventListener('change',async e=>{
+  if(!e.target.files[0]||!currentModalCardId)return;
+  const data=await resizeImage(e.target.files[0]);
+  await addPhotoToCard(currentModalCardId,data);
+  e.target.value='';
+});
+
+async function addPhotoToCard(id,photoData){
+  const c=cards.find(x=>x.id===id);
+  if(!c)return;
+  if(!c.photos)c.photos=[];
+  c.photos.push(photoData);
+  await updateCard(c);
+  await loadCards();
+  renderModalPhotos(c);
+}
+
+async function removePhotoFromCard(id,idx){
+  const c=cards.find(x=>x.id===id);
+  if(!c||!c.photos)return;
+  c.photos.splice(idx,1);
+  await updateCard(c);
+  await loadCards();
+  renderModalPhotos(c);
+}
+
+function renderModalPhotos(c){
+  const container=document.getElementById('modalPhotos');
+  const isSealed=c.image&&c.image.startsWith('data:');
+  const photos=[];
+  if(c.image){
+    if(isSealed){
+      // Sealed: show large centered image, no delete button
+      photos.push(`<div style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:100%">
+        <img src="${c.image}" alt="Sealed" style="width:120px;height:168px;object-fit:contain;border-radius:10px">
+      </div>`);
+    } else {
+      photos.push(`<div style="position:relative;flex-shrink:0">
+        <img src="${imgSrc(c.image).replace('/low.webp','/high.webp')}" alt="" onerror="this.style.display='none'">
+        <button class="remove-photo" onclick="event.stopPropagation();removeCardImage(${c.id})" style="position:absolute;top:4px;right:4px" title="Bild löschen">✕</button>
+      </div>`);
+    }
+  }
+  if(c.photos&&c.photos.length){
+    c.photos.forEach((p,i)=>{
+      photos.push(`<div style="position:relative;flex-shrink:0">
+        <img src="${p}" alt="" style="height:140px;border-radius:10px" onerror="this.parentElement.style.display='none'">
+        <button class="remove-photo" onclick="event.stopPropagation();removePhotoFromCard(${c.id},${i})" style="position:absolute;top:4px;right:4px">✕</button>
+      </div>`);
+    });
+  }
+  if(!photos.length) photos.push('<div style="width:120px;height:140px;background:var(--bg);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:40px;flex-shrink:0">🃏</div>');
+  // Image URL input + search button (not for sealed)
+  if(!isSealed){
+    const enN=toEnName(cleanName(c.name))||cleanName(c.name);
+    const info=extractSetInfo(c.name);
+    const searchQ=encodeURIComponent(enN+(info?' '+info.set+(info.num?' '+info.num:'')+' pokemon card':' pokemon card'));
+    photos.push(`<div style="flex-shrink:0;display:flex;flex-direction:column;gap:6px;justify-content:center;min-width:140px">
+      <input type="text" id="modalImageUrl" placeholder="Bild-URL einfügen..."
+        style="font-size:11px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);width:160px"
+        onkeydown="if(event.key==='Enter')setCardImageUrl(${c.id})">
+      <button onclick="setCardImageUrl(${c.id})"
+        style="font-size:11px;padding:5px 10px;border-radius:8px;background:var(--accent);color:#000;font-weight:600;border:none;cursor:pointer">Bild setzen</button>
+      <a href="https://www.google.com/search?tbm=isch&q=${searchQ}" target="_blank"
+        style="font-size:11px;padding:5px 10px;border-radius:8px;background:var(--bg);color:var(--accent);font-weight:600;border:1px solid var(--border);text-align:center;text-decoration:none">🔍 Bild suchen</a>
+    </div>`);
+  }
+  container.innerHTML=photos.join('');
+}
+
+async function removeCardImage(id){
+  const c=cards.find(x=>x.id===id);
+  if(!c) return;
+  c.image='';
+  await updateCard(c);
+  await loadCards();
+  renderModalPhotos(c);
+  renderCollection();
+  renderDashboard();
+}
+
+async function setCardImageUrl(id){
+  const url=document.getElementById('modalImageUrl').value.trim();
+  if(!url) return;
+  const c=cards.find(x=>x.id===id);
+  if(!c) return;
+  c.image=url;
+  await updateCard(c);
+  await loadCards();
+  renderModalPhotos(c);
+  renderCollection();
+  renderDashboard();
+}
+
+function showMissingImages(){
+  const list=document.getElementById('missingImgList');
+  if(list.style.display!=='none'){list.style.display='none';return}
+  const missing=cards.filter(c=>!c.image&&c.category!=='Sealed');
+  document.getElementById('missingImgCount').textContent=missing.length+' Karten ohne Bild';
+  if(!missing.length){list.style.display='none';return}
+  // Sort by price descending
+  missing.sort((a,b)=>(b.price||0)-(a.price||0));
+  list.innerHTML=missing.map(c=>{
+    const enN=toEnName(cleanName(c.name))||cleanName(c.name);
+    const info=extractSetInfo(c.name);
+    const q=encodeURIComponent(enN+(info?' '+info.set+(info.num?' '+info.num:'')+' pokemon card':' pokemon card'));
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid var(--border);margin-bottom:4px;font-size:12px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
+        <div style="color:var(--text3);font-size:10px">${c.category} • ${fmtE(c.price||0)}</div>
+      </div>
+      <a href="https://www.google.com/search?tbm=isch&q=${q}" target="_blank"
+        style="flex-shrink:0;font-size:10px;padding:4px 8px;border-radius:6px;background:var(--accent-light);color:var(--accent);text-decoration:none;font-weight:600">🔍</a>
+      <button onclick="event.stopPropagation();openModal(${c.id})"
+        style="flex-shrink:0;font-size:10px;padding:4px 8px;border-radius:6px;background:var(--bg);color:var(--text2);border:1px solid var(--border);cursor:pointer;font-weight:600">Öffnen</button>
+    </div>`;
+  }).join('');
+  list.style.display='block';
+}
+
+// ═══════════════════════════════════════════════
+// Auto-Match TCGdex Images
+// ═══════════════════════════════════════════════
+// Extract clean card name without set info in parentheses
+function cleanName(name){
+  return name.replace(/\u00a0/g,' ').replace(/\s*\(.*?\)\s*/g,'').replace(/\s+/g,' ').trim();
+}
+
+// German → English Pokémon name map (most common in Maurice's collection)
+const DE_EN={
+  // Eeveelutions
+  'Evoli':'Eevee','Nachtara':'Umbreon','Psiana':'Espeon','Aquana':'Vaporeon',
+  'Blitza':'Jolteon','Flamara':'Flareon','Glaziola':'Glaceon','Folipurba':'Leafeon',
+  'Feelinara':'Sylveon',
+  // Starters & Evos
+  'Glumanda':'Charmander','Glutexo':'Charmeleon','Glurak':'Charizard',
+  'Bisasam':'Bulbasaur','Bisaknosp':'Ivysaur','Bisaflor':'Venusaur',
+  'Schiggy':'Squirtle','Schillok':'Wartortle','Turtok':'Blastoise',
+  // Popular Gen 1
+  'Pikachu':'Pikachu','Raichu':'Raichu','Mewtu':'Mewtwo','Mew':'Mew',
+  'Gengar':'Gengar','Simsala':'Alakazam','Machomei':'Machamp',
+  'Dragoran':'Dragonite','Garados':'Gyarados','Relaxo':'Snorlax',
+  'Arktos':'Articuno','Zapdos':'Zapdos','Lavados':'Moltres',
+  'Vulpix':'Vulpix','Vulnona':'Ninetales','Enton':'Psyduck','Entoron':'Golduck',
+  'Tauboss':'Pidgeot','Pummeluff':'Jigglypuff','Knuddeluff':'Wigglytuff',
+  // Gen 2
+  'Lugia':'Lugia','Ho-Oh':'Ho-Oh','Celebi':'Celebi','Despotar':'Tyranitar',
+  'Impergator':'Feraligatr','Tornupto':'Typhlosion','Meganie':'Meganium',
+  // Gen 3+
+  'Rayquaza':'Rayquaza','Giratina':'Giratina','Dialga':'Dialga','Palkia':'Palkia',
+  'Reshiram':'Reshiram','Zekrom':'Zekrom','Kyurem':'Kyurem',
+  'Lucario':'Lucario','Darkrai':'Darkrai','Arceus':'Arceus',
+  'Deoxys':'Deoxys','Latias':'Latias','Latios':'Latios',
+  'Durengard':'Aegislash','Quajutsu':'Greninja',
+  'Miraidon':'Miraidon','Koraidon':'Koraidon',
+};
+function toEnName(deName){
+  // Match suffix like ex, EX, GX, VMAX, V, etc.
+  const suffixMatch=deName.match(/\s+(ex|EX|GX|VMAX|VSTAR|V|Tag Team|δ Delta Species)(.*)$/i);
+  const base=suffixMatch?deName.slice(0,suffixMatch.index).trim():deName.trim();
+  const suffix=suffixMatch?deName.slice(suffixMatch.index).trim():'';
+  // Check "Mega X" pattern
+  const megaMatch=base.match(/^Mega\s+(.+)/i);
+  if(megaMatch){
+    const inner=DE_EN[megaMatch[1]];
+    if(inner) return 'Mega '+inner+(suffix?' '+suffix:'');
+  }
+  const en=DE_EN[base];
+  if(en) return en+(suffix?' '+suffix:'');
+  return null;
+}
+
+function extractSetInfo(name){
+  const s=name.replace(/\u00a0/g,' ');
+  // Standard: (CODE NUM) — e.g. (sv2a 201), (SM-P 287)
+  let m=s.match(/\(([A-Za-z0-9+\-]+)\s+([A-Za-z]*\d+(?:\/\d+)?)\s*\)/);
+  if(m){let set=m[1],num=m[2].split('/')[0];if(set.startsWith('x')&&set.length>2)set=set.slice(1);return{set,num}}
+  // Complex: (XXX CODE NUM) — e.g. (CEL POP5 17), (BOO24 OBF 130), (BKPPR MD 62)
+  m=s.match(/\([A-Za-z0-9]+\s+([A-Za-z0-9\-]+)\s+(\d+)\s*\)/);
+  if(m){let set=m[1];return{set,num:m[2]}}
+  // Set-only: (CODE) without number — e.g. (N2), (PJU), (ROG)
+  m=s.match(/\(([A-Za-z0-9\-]+)\)\s*$/);
+  if(m){let set=m[1];if(set.startsWith('x')&&set.length>2)set=set.slice(1);return{set,num:null}}
+  return null;
+}
+
+const SET_MAP={
+  // Sword & Shield EN
+  'LOR':'swsh11','EVS':'swsh7','CRZ':'swsh12.5','BRS':'swsh9','FST':'swsh8',
+  'CHP':'swsh3.5','SHF':'swsh4.5','VIV':'swsh4','DAA':'swsh3','RCL':'swsh2','SSH':'swsh1',
+  // Sun & Moon EN
+  'CEC':'sm12','UNM':'sm11','UNB':'sm10','TEU':'sm9','LOT':'sm8',
+  'CES':'sm7','FLI':'sm6','UPR':'sm5','CIN':'sm4','BUS':'sm3',
+  'GRI':'sm2','SUM':'sm1',
+  // XY EN
+  'EVO':'xy12','STS':'xy11','FCO':'xy10','BKP':'xy9','BKT':'xy8',
+  'AOR':'xy7','ROS':'xy6','PRC':'xy5','PHF':'xy4','FUF':'xy3','FLF':'xy2','XY':'xy1',
+  // BW EN
+  'LTR':'bw11','PLB':'bw9','PLF':'bw8','PLS':'bw7','BCR':'bw6','DRX':'bw5',
+  'DEX':'bw4','NXD':'bw3','NVI':'bw2','EPO':'bw1',
+  // HGSS EN
+  'UD':'hgss3','UL':'hgss2','HS':'hgss1',
+  // Classic EN
+  'JU':'base2','FO':'base3','BS':'base1','SK':'ecard3','AQ':'ecard2','EX':'ecard1',
+  'DS':'ex11','EM':'ex7','UF':'ex8','HP':'ex12','CG':'ex13','DF':'ex14','PK':'ex15',
+  // Scarlet & Violet EN
+  'OBF':'sv1','PAL':'sv2','MEW151':'sv3.5','PAR':'sv3',
+  'TEF':'sv4','TWM':'sv5','SFA':'sv5.5','SCR':'sv6','SSP':'sv7',
+  'SUR':'sv8','PRE':'sv8.5','JTG':'sv9',
+  // Promos EN
+  'SVP':'svp','BWP':'bwp','BW':'bwp','SMP':'smp','SWSHP':'swshp','XYP':'xyp',
+  // Special / German
+  'GEN':'g1','DET':'det1','PGO':'pgo','MEW':'swsh10.5',
+  'PFL':'sv4.5','MEG':'xy3','MEP':'svp',
+  // JP Promo prefixes → EN promo sets
+  'SM-P':'smp','SV-P':'svp','S-P':'swshp','BW-P':'bwp',
+  // German old set abbreviations
+  'N1':'neo1','N2':'neo2','N3':'neo3','N4':'neo4',
+  'PJU':'base2','JU':'base2','FO':'base3','BS':'base1',
+  'ROG':'base5','G1':'gym1','G2':'gym2',
+  'UNP':'np','MFO':'base3','EXS':'ecard1',
+  'POP5':'pop5','CEL':'cel25',
+  // JP collection packs
+  'CP1':'CP1','CP2':'CP2','CP3':'CP3','CP4':'CP4','CP5':'CP5','CP6':'CP6',
+  // JP Sun & Moon sets
+  'SM1M':'sm1','SM1S':'sm1','SM1+':'sm1','SM2L':'sm2','SM2K':'sm2',
+  'SM3H':'sm3','SM3N':'sm3','SM4A':'sm4','SM4+':'sm4','SM5M':'sm5','SM5S':'sm5',
+  'SM5+':'sm5','SM6A':'sm6','SM6B':'sm6','SM7A':'sm7','SM7B':'sm7',
+  'SM8A':'sm8','SM8B':'sm8','SM9A':'sm9','SM9B':'sm9',
+  'SM10A':'sm10','SM10B':'sm10','SM11A':'sm11','SM11B':'sm11',
+  'SM12A':'sm12a',
+  // JP older sets
+  'M2A':'xy7','PCG6':'ex11','PCG5':'ex10','PCG4':'ex9','PCG3':'ex8','PCG2':'ex7','PCG1':'ex6',
+  'ADV4':'ex5','ADV3':'ex4','ADV2':'ex3','ADV1':'ex2',
+  // Identity mappings — when Excel already uses TCGdex set IDs
+  'SV1':'sv1','SV2':'sv2','SV3':'sv3','SV4':'sv4','SV5':'sv5','SV6':'sv6','SV7':'sv7','SV8':'sv8','SV9':'sv9',
+  'SV1EN5':'sv1en5','SV2A':'sv2a','SV3.5':'sv3.5','SV4.5':'sv4.5','SV5.5':'sv5.5','SV8.5':'sv8.5',
+  'SM1':'sm1','SM2':'sm2','SM3':'sm3','SM4':'sm4','SM5':'sm5','SM6':'sm6',
+  'SM7':'sm7','SM8':'sm8','SM9':'sm9','SM10':'sm10','SM11':'sm11','SM12':'sm12',
+  'SM12A':'sm12a',
+  'SWSH1':'swsh1','SWSH2':'swsh2','SWSH3':'swsh3','SWSH4':'swsh4','SWSH5':'swsh5',
+  'SWSH6':'swsh6','SWSH7':'swsh7','SWSH8':'swsh8','SWSH9':'swsh9','SWSH10':'swsh10',
+  'SWSH11':'swsh11','SWSH12':'swsh12','SWSH12.5':'swsh12.5',
+  'BW1':'bw1','BW2':'bw2','BW3':'bw3','BW4':'bw4','BW5':'bw5',
+  'BW6':'bw6','BW7':'bw7','BW8':'bw8','BW9':'bw9','BW10':'bw10',
+  'XY1':'xy1','XY2':'xy2','XY3':'xy3','XY4':'xy4','XY5':'xy5',
+  'XY6':'xy6','XY7':'xy7','XY8':'xy8','XY9':'xy9','XY10':'xy10','XY11':'xy11','XY12':'xy12',
+};
+
+// pokemontcg.io image fallback: predictable URL, no leading zeros, EN sets only
+function ptcgioImage(setId, num){
+  const n=parseInt(num,10);
+  if(!n||!setId) return null;
+  return `https://images.pokemontcg.io/${setId}/${n}.png`;
+}
+
+async function tryFetchCard(id, lang){
+  try{
+    const r=await fetch(`${TCGDEX}/${lang}/cards/${id}`);
+    if(r.ok){
+      const data=await r.json();
+      const price=data.pricing?.cardmarket?.trend||null;
+      if(data.image) return {image:data.image, id:data.id, price};
+      // TCGdex has card but no image → try pokemontcg.io fallback
+      const setId=data.set?.id, localId=data.localId;
+      if(setId&&localId){
+        const fallback=ptcgioImage(setId, localId);
+        if(fallback) return {image:fallback, id:data.id, price, ptcgio:true};
+      }
+    }
+  }catch{}
+  return null;
+}
+
+async function tryMultiple(attempts){
+  const results=await Promise.all(attempts.map(([id,lang])=>tryFetchCard(id,lang)));
+  // Prefer results with TCGdex image over ptcgio fallback
+  return results.find(r=>r&&!r.ptcgio)||results.find(r=>r!==null)||null;
+}
+
+// JP promo sets where card numbers DON'T match between JP and EN
+const JP_PROMO_SETS=new Set(['SV-P','SM-P','S-P','BW-P','XY-P']);
+
+async function findCardImage(name, language){
+  const clean=cleanName(name);
+  if(!clean||clean==='Normale Karten') return null;
+
+  const info=extractSetInfo(name);
+  if(!info) return null;
+
+  const s=info.set, su=s.toUpperCase(), sl=s.toLowerCase();
+  const n=info.num, np=n?n.padStart(3,'0'):null;
+  // Strip leading zeros: "069" → "69"
+  const nStrip=n?String(parseInt(n,10)||n):null;
+  const mapped=SET_MAP[su];
+
+  const cardName=clean.replace(/\s*δ\s*Delta Species/i,'').replace(/\s*Lv\.\d+/i,'')
+    .replace(/\s*(Reverse|1st Edition|Stamp|Promo.*|Pokemon Day|Gemeinsam.*|OBF Stamp|Gold Star)$/i,'').trim();
+
+  const isJP=language==='JP'||language==='JPN'||language==='Japanisch';
+  const isJPPromo=JP_PROMO_SETS.has(su);
+
+  // Phase 1: Direct TCGdex ID lookups — SKIP for JP promo cards (numbers don't match EN)
+  if(n && !(isJP && isJPPromo)){
+    const ids=new Set();
+    const nums=[n];
+    if(np&&np!==n) nums.push(np);
+    if(nStrip&&nStrip!==n&&nStrip!==np) nums.push(nStrip);
+    for(const num of nums){
+      if(mapped){ids.add(mapped+'-'+num);ids.add(mapped+'-'+su+num)}
+      ids.add(sl+'-'+num);
+    }
+    const attempts=[];
+    for(const id of ids){
+      // For JP cards, try JA first; for others, try EN first
+      if(isJP){attempts.push([id,'ja'],[id,'en'])}
+      else{attempts.push([id,'en'],[id,'ja'])}
+    }
+    const phase1=await tryMultiple(attempts);
+    if(phase1) return phase1;
+  }
+
+  const enName=toEnName(cardName);
+  const names=[cardName];
+  if(enName&&enName!==cardName) names.push(enName);
+
+  // Phase 2: TCGdex name search — SKIP for JP promo cards
+  if(n && !(isJP && isJPPromo)){
+    for(const searchName of names){
+      const langs=isJP?['ja','de','en']:['de','en'];
+      const langResults=await Promise.all(langs.map(async lang=>{
+        try{
+          const r=await fetch(`${TCGDEX}/${lang}/cards?name=${encodeURIComponent(searchName)}`);
+          return r.ok?{results:await r.json(),lang}:{results:[],lang};
+        }catch{return {results:[],lang}}
+      }));
+      for(const {results,lang} of langResults){
+        const match=results.find(c=>c.id?.endsWith('-'+n)||c.id?.endsWith('-'+np)||c.id?.endsWith('-'+nStrip));
+        if(match){const r=await tryFetchCard(match.id, lang);if(r) return r;}
+      }
+    }
+  }
+
+  // Phase 3: pokemontcg.io — SKIP for JP promo cards (EN-only database)
+  if(n && !(isJP && isJPPromo)){
+    const ptcgio='https://api.pokemontcg.io/v2/cards';
+    const enSearch=names[names.length-1]; // EN name (last in array)
+    const numFormats=[nStrip, su+nStrip]; // stripped + promo format
+    if(n!==nStrip) numFormats.unshift(n); // original if different
+    for(const nf of numFormats){
+      const nq=/^\d+$/.test(nf)?nf:('"'+nf+'"');
+      const q=mapped
+        ?`name:"${enSearch}" number:${nq} set.id:${mapped}`
+        :`name:"${enSearch}" number:${nq}`;
+      try{
+        const r=await fetch(`${ptcgio}?q=${encodeURIComponent(q)}&pageSize=3`);
+        if(r.ok){const d=await r.json();const hits=d.data||[];
+          const card=hits.length===1?hits[0]:(mapped?hits.find(c=>c.set?.id===mapped):null);
+          if(card?.images?.small) return {image:card.images.small, id:card.id, price:null, ptcgio:true};}
+      }catch{}
+    }
+  }
+
+  // Phase 4: Pricecharting scraper — works for all languages including JP promos
+  if(n){
+    const PROXIES=['https://api.codetabs.com/v1/proxy?quest=','https://corsproxy.io/?'];
+    async function fetchViaProxy(url){
+      for(const proxy of PROXIES){
+        try{const r=await fetch(proxy+encodeURIComponent(url));if(r.ok) return await r.text()}catch{}
+      }
+      return null;
+    }
+    function extractImage(html, title, checkName){
+      const pageTitle=title.toLowerCase();
+      const nameCheck=checkName.toLowerCase().split(' ')[0];
+      const ns=(nStrip||n).toLowerCase();
+      // Must be a product page: has '#' + number in some format
+      const hasHash=pageTitle.includes('#'+ns)||pageTitle.includes('#'+su.toLowerCase()+ns)
+        ||pageTitle.includes('#'+ns+'/'+su.toLowerCase())||pageTitle.includes('#'+ns+su.toLowerCase());
+      if(!hasHash) return null;
+      if(!pageTitle.includes(nameCheck)) return null;
+      const imgMatch=html.match(/https:\/\/storage\.googleapis\.com\/images\.pricecharting\.com\/([^/"\\]+)\/(?:60|240|1600)\.jpg/);
+      if(imgMatch) return 'https://storage.googleapis.com/images.pricecharting.com/'+imgMatch[1]+'/1600.jpg';
+      return null;
+    }
+    // Build queries: most specific first, use English name + stripped number
+    const pcEnName=names.length>1?names[1]:names[0];
+    const ns=nStrip||n;
+    // JP promo cards need different, more specific queries
+    const queries= (isJP && isJPPromo) ? [
+      pcEnName+' '+su+' '+ns+' japanese promo pokemon',
+      pcEnName+' japanese promo '+ns+' pokemon',
+      pcEnName+' '+ns+' japanese pokemon promo',
+      pcEnName+' #'+ns+' japanese pokemon',
+    ] : [
+      pcEnName+' #'+su+ns+' pokemon',
+      pcEnName+' '+su+ns+' pokemon promo',
+      pcEnName+' #'+ns+'/'+su+' pokemon',
+      pcEnName+' '+ns+' '+su+' pokemon japanese',
+      pcEnName+' '+ns+' '+su+' pokemon',
+    ];
+    // For JP promos, relax the hash check — many JP promo pages don't use '#' format
+    function extractImageRelaxed(html, title, checkName){
+      const pageTitle=title.toLowerCase();
+      const nameCheck=checkName.toLowerCase().split(' ')[0];
+      const ns=(nStrip||n).toLowerCase();
+      if(pageTitle.includes('search results')) return null;
+      if(!pageTitle.includes(nameCheck)) return null;
+      // For JP promos: accept if title contains 'japanese' and the number somewhere
+      if(!pageTitle.includes('japanese')) return null;
+      if(!pageTitle.includes(ns)) return null;
+      const imgMatch=html.match(/https:\/\/storage\.googleapis\.com\/images\.pricecharting\.com\/([^/"\\]+)\/(?:60|240|1600)\.jpg/);
+      if(imgMatch) return 'https://storage.googleapis.com/images.pricecharting.com/'+imgMatch[1]+'/1600.jpg';
+      return null;
+    }
+    for(const q of queries){
+      const pcUrl='https://www.pricecharting.com/search-products?q='+encodeURIComponent(q)+'&type=prices';
+      const html=await fetchViaProxy(pcUrl);
+      if(!html) continue;
+      const titleMatch=html.match(/<title>([^<]+)<\/title>/i);
+      if(!titleMatch) continue;
+      // Try strict match first, then relaxed for JP promos
+      let img=extractImage(html, titleMatch[1], pcEnName);
+      if(!img && isJP && isJPPromo) img=extractImageRelaxed(html, titleMatch[1], pcEnName);
+      if(img) return {image:img, id:'pc-'+su+'-'+n, price:null, ptcgio:true};
+    }
+  }
+
+  // Phase 5: Google Custom Search fallback for JP promos still not found
+  // Uses Pricecharting result links from search page
+  if(n && isJP && isJPPromo){
+    const pcEnName=names.length>1?names[1]:names[0];
+    const ns=nStrip||n;
+    const PROXIES=['https://api.codetabs.com/v1/proxy?quest=','https://corsproxy.io/?'];
+    async function fetchViaProxy(url){
+      for(const proxy of PROXIES){
+        try{const r=await fetch(proxy+encodeURIComponent(url));if(r.ok) return await r.text()}catch{}
+      }
+      return null;
+    }
+    // Try search results page and follow first product link
+    const searchQ=pcEnName+' '+ns+' japanese promo pokemon';
+    const searchUrl='https://www.pricecharting.com/search-products?q='+encodeURIComponent(searchQ)+'&type=prices';
+    const searchHtml=await fetchViaProxy(searchUrl);
+    if(searchHtml){
+      // Find product links in search results
+      const linkMatches=[...searchHtml.matchAll(/href="(\/game\/pokemon-japanese[^"]*?)"/g)];
+      for(const lm of linkMatches.slice(0,3)){
+        const prodUrl='https://www.pricecharting.com'+lm[1];
+        const prodHtml=await fetchViaProxy(prodUrl);
+        if(!prodHtml) continue;
+        const titleMatch=prodHtml.match(/<title>([^<]+)<\/title>/i);
+        if(!titleMatch) continue;
+        const pageTitle=titleMatch[1].toLowerCase();
+        const nameCheck=pcEnName.toLowerCase().split(' ')[0];
+        if(!pageTitle.includes(nameCheck)) continue;
+        const imgMatch=prodHtml.match(/https:\/\/storage\.googleapis\.com\/images\.pricecharting\.com\/([^/"\\]+)\/(?:60|240|1600)\.jpg/);
+        if(imgMatch) return {image:'https://storage.googleapis.com/images.pricecharting.com/'+imgMatch[1]+'/1600.jpg', id:'pc-'+su+'-'+n, price:null, ptcgio:true};
+      }
+    }
+  }
+
+  return null;
+}
+
+async function debugFindCard(name){
+  const log=[];
+  const clean=cleanName(name);
+  const info=extractSetInfo(name);
+  log.push('Name: '+clean+' | Set: '+(info?info.set:'NONE')+' | Num: '+(info?info.num:'NONE'));
+  if(!info){log.push('⛔ extractSetInfo returned null');return log.join('\n')}
+  const s=info.set,su=s.toUpperCase(),sl=s.toLowerCase(),n=info.num,np=n?n.padStart(3,'0'):null;
+  const mapped=SET_MAP[su];
+  log.push('Mapped set: '+(mapped||'NONE'));
+  const cardName=clean.replace(/\s*δ\s*Delta Species/i,'').replace(/\s*Lv\.\d+/i,'')
+    .replace(/\s*(Reverse|1st Edition|Stamp|Promo.*|Pokemon Day|Gemeinsam.*|OBF Stamp|Gold Star)$/i,'').trim();
+  log.push('CardName: '+cardName);
+
+  // Phase 1
+  if(n){
+    const ids=new Set();
+    if(mapped){ids.add(mapped+'-'+n);if(n!==np)ids.add(mapped+'-'+np)}
+    ids.add(sl+'-'+n);if(n!==np)ids.add(sl+'-'+np);
+    for(const id of ids){
+      try{const r=await fetch(`${TCGDEX}/en/cards/${id}`);log.push('P1 '+id+': '+r.status)}
+      catch(e){log.push('P1 '+id+': ERR '+e.message)}
+    }
+  } else log.push('P1: skip (no num)');
+
+  // Phase 2
+  if(cardName&&n){
+    for(const lang of ['de','en']){
+      try{
+        const r=await fetch(`${TCGDEX}/${lang}/cards?name=${encodeURIComponent(cardName)}`);
+        const d=r.ok?await r.json():[];
+        const match=d.find(c=>c.id?.endsWith('-'+n)||c.id?.endsWith('-'+np));
+        log.push('P2 '+lang+': '+d.length+' results'+(match?' → match: '+match.id:''));
+      }catch(e){log.push('P2 '+lang+': ERR '+e.message)}
+    }
+  } else log.push('P2: skip');
+
+  // Phase 3
+  if(cardName&&n){
+    const nInt=parseInt(n,10);const nQuery=nInt?nInt:'"'+n+'"';
+    const q=mapped?`name:"${cardName}" number:${nQuery} set.id:${mapped}`:`name:"${cardName}" number:${nQuery}`;
+    try{
+      const r=await fetch(`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q)}&pageSize=3`);
+      const d=r.ok?await r.json():{data:[]};
+      log.push('P3 ptcgio: '+r.status+', hits: '+(d.data?.length||0)+(d.data?.[0]?.images?.small?' → has image':''));
+    }catch(e){log.push('P3: ERR '+e.message)}
+  } else log.push('P3: skip');
+
+  // Phase 4
+  if(cardName&&n){
+    const pcQuery=[cardName,n,su,'pokemon'].join(' ');
+    const proxies=['https://api.codetabs.com/v1/proxy?quest=','https://corsproxy.io/?'];
+    for(const proxy of proxies){
+      try{
+        const pcUrl='https://www.pricecharting.com/search-products?q='+encodeURIComponent(pcQuery)+'&type=prices';
+        const r=await fetch(proxy+encodeURIComponent(pcUrl));
+        const html=r.ok?await r.text():'';
+        const titleMatch=html.match(/<title>([^<]+)<\/title>/i);
+        const title=(titleMatch?.[1]||'').substring(0,80);
+        const hasImg=!!html.match(/storage\.googleapis\.com\/images\.pricecharting\.com/);
+        log.push('P4 '+proxy.split('//')[1].split('/')[0]+': '+r.status+', title: "'+title+'", hasImg: '+hasImg);
+        if(r.ok) break;
+      }catch(e){log.push('P4 '+proxy.split('//')[1].split('/')[0]+': ERR '+e.message)}
+    }
+  } else log.push('P4: skip');
+
+  return log.join('\n');
+}
+
+async function matchAllImages(){
+  const status=document.getElementById('imageMatchStatus');
+
+  // Sealed products get a generic box image — do this FIRST
+  const SEALED_IMG="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='420' viewBox='0 0 300 420'%3E%3Crect width='300' height='420' rx='16' fill='%231a1f2e'/%3E%3Crect x='40' y='60' width='220' height='160' rx='14' fill='%23252d45' stroke='%23d4a44a' stroke-width='3'/%3E%3Crect x='32' y='44' width='236' height='34' rx='10' fill='%232d3655' stroke='%23d4a44a' stroke-width='3'/%3E%3Crect x='138' y='44' width='24' height='180' fill='%23d4a44a' opacity='0.15'/%3E%3Cline x1='40' y1='140' x2='260' y2='140' stroke='%23d4a44a' stroke-width='1' opacity='0.2'/%3E%3Ccircle cx='150' cy='120' r='30' fill='%23d4a44a' opacity='0.15' stroke='%23d4a44a' stroke-width='2' stroke-opacity='0.6'/%3E%3Ctext x='150' y='130' text-anchor='middle' font-family='system-ui' font-size='28' fill='%23d4a44a' opacity='0.8'%3E%E2%9C%A7%3C/text%3E%3Ctext x='150' y='290' text-anchor='middle' font-family='system-ui,sans-serif' font-size='28' font-weight='800' letter-spacing='6' fill='%23d4a44a'%3ESEALED%3C/text%3E%3Cline x1='70' y1='305' x2='230' y2='305' stroke='%23d4a44a' stroke-width='2' opacity='0.4'/%3E%3Ctext x='150' y='345' text-anchor='middle' font-family='system-ui' font-size='13' fill='%23d4a44a' opacity='0.5'%3ECOLLECTION ITEM%3C/text%3E%3C/svg%3E";
+  let sealedFixed=0;
+  for(const c of cards){
+    if(c.category==='Sealed'&&c.image!==SEALED_IMG){
+      c.image=SEALED_IMG;
+      await updateCard(c);
+      sealedFixed++;
+    }
+  }
+  if(sealedFixed){await loadCards();renderDashboard();status.textContent=sealedFixed+' Sealed-Produkte aktualisiert.'}
+
+  // Fix JP promo cards that got wrong EN images — clear them so they get re-matched
+  let jpPromoFixed=0;
+  for(const c of cards){
+    if(!c.image||c.image.startsWith('data:')) continue;
+    const info=extractSetInfo(c.name);
+    if(!info) continue;
+    const su=info.set.toUpperCase();
+    const isJP=c.language==='JP'||c.language==='JPN'||c.language==='Japanisch';
+    if(isJP && JP_PROMO_SETS.has(su)){
+      // Clear wrong image from EN promo set lookup
+      c.image=''; c.tcgdexId='';
+      await updateCard(c);
+      jpPromoFixed++;
+    }
+  }
+  if(jpPromoFixed){await loadCards();renderDashboard();status.textContent=jpPromoFixed+' JP-Promo Bilder zurückgesetzt...'}
+
+  // Now compute noImage AFTER sealed + JP promo fix
+  const noImage=cards.filter(c=>!c.image);
+  if(!noImage.length){
+    status.textContent=(sealedFixed?sealedFixed+' Sealed ✓ — ':'')+'Alle Karten haben bereits Bilder!';
+    setTimeout(()=>{status.textContent='TCGdex-Artworks für alle Karten laden'},3000);
+    return;
+  }
+
+  status.textContent=`Teste Verbindung...`;
+
+  // Test basic API connectivity first
+  let apiOk=false;
+  try{
+    const t=await fetch('https://api.tcgdex.net/v2/en/cards/swsh3-136');
+    apiOk=t.ok;
+  }catch(e){
+    status.textContent='API nicht erreichbar: '+e.message;
+    return;
+  }
+  if(!apiOk){status.textContent='API antwortet nicht (nicht 200)';return}
+
+  status.textContent=`API OK. Matche 0/${noImage.length}...`;
+  let matched=0, failed=0;
+  const errors=[];
+
+  for(const c of noImage){
+    let result=null;
+    try{
+      result=await findCardImage(c.name, c.language);
+    }catch(e){
+      errors.push(c.name+': '+e.message);
+    }
+    if(result){
+      c.image=result.image;
+      c.tcgdexId=result.id;
+      if(result.price&&!c.price) c.cmPrice=result.price;
+      await updateCard(c);
+      matched++;
+    } else {
+      failed++;
+      if(errors.length<5) errors.push(c.name);
+    }
+    status.textContent=`Matche ${matched+failed}/${noImage.length}... (${matched} ✓ ${failed} ✗)`;
+    if((matched+failed)%10===0){await loadCards();renderDashboard()}
+    await new Promise(ok=>setTimeout(ok,100));
+  }
+  await loadCards();
+  renderDashboard();
+  const msg=`Fertig! ${matched} Bilder, ${failed} nicht gefunden.`;
+  status.textContent=msg;
+  if(errors.length) console.warn('Nicht gefunden:',errors);
+  // Show debug info if nothing matched — run detailed debug on first failed card
+  if(!matched&&failed){
+    const firstFail=noImage.find(c=>!c.image);
+    status.textContent='Debug läuft für: '+firstFail.name+'...';
+    const debugLog=await debugFindCard(firstFail.name);
+    const dbg=document.createElement('div');
+    dbg.id='matchDebug';
+    dbg.style.cssText='margin-top:8px;padding:10px;background:var(--bg);border-radius:8px;font-size:11px;color:var(--text2);max-height:300px;overflow:auto;white-space:pre-wrap;font-family:monospace';
+    const logText='Debug für: '+firstFail.name+'\n'+debugLog+'\n\nErste 10 fehlgeschlagen:\n'+errors.slice(0,10).map(e=>'• '+e).join('\n');
+    dbg.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+      '<b style="color:var(--red)">Debug</b>'+
+      '<button onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.textContent);this.textContent=\'Kopiert!\';setTimeout(()=>this.textContent=\'Kopieren\',2000)" '+
+      'style="font-size:10px;padding:3px 8px;border-radius:6px;background:var(--accent-light);color:var(--accent);border:none;cursor:pointer">Kopieren</button></div>'+
+      '<div style="user-select:text">'+logText.replace(/\n/g,'<br>')+'</div>';
+    const old=document.getElementById('matchDebug');
+    if(old) old.remove();
+    status.parentElement.parentElement.after(dbg);
+    status.textContent=`Fertig! ${matched} Bilder, ${failed} nicht gefunden.`;
+  }
+  setTimeout(()=>{status.textContent='TCGdex-Artworks für alle Karten laden'},15000);
+}
+
+// Show grade field when Slabs selected
+document.getElementById('addCategory').addEventListener('change',e=>{
+  document.getElementById('gradeGroup').style.display=e.target.value==='Slabs'?'block':'none';
+});
+
+async function saveCard(){
+  if(!pendingApiCard) return;
+  const card={
+    name: pendingApiCard.name||pendingApiCard.id,
+    tcgdexId: pendingApiCard.id,
+    setId: pendingApiCard.set?.id||'',
+    setName: pendingApiCard.set?.name||'',
+    localId: pendingApiCard.localId||'',
+    image: pendingApiCard.image||'',
+    rarity: pendingApiCard.rarity||'',
+    category: document.getElementById('addCategory').value,
+    language: document.getElementById('addLang').value,
+    condition: document.getElementById('addCondition').value,
+    grade: document.getElementById('addGrade').value||'',
+    price: parseFloat(document.getElementById('addPrice').value)||0,
+    priceTrend: null,
+    photos: addPhotoData ? [addPhotoData] : [],
+    priceHistory: [{date:new Date().toISOString().slice(0,10), price:parseFloat(document.getElementById('addPrice').value)||0}],
+    dateAdded: new Date().toISOString()
+  };
+  await addCard(card);
+  await loadCards();
+  // Reset form
+  pendingApiCard=null;
+  addPhotoData=null;
+  removeAddPhoto();
+  showAddStep(1);
+  document.getElementById('apiSearch').value='';
+  document.getElementById('apiResults').innerHTML='';
+  // Show success & switch to collection
+  setTimeout(()=>{
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.querySelector('[data-view="viewCollection"]').classList.add('active');
+    document.getElementById('viewCollection').classList.add('active');
+    activeFilter='Alle';
+    renderCollection();
+  },400);
+}
+
+// ═══════════════════════════════════════════════
+// Card Detail Modal
+// ═══════════════════════════════════════════════
+let modalChart=null;
+function openModal(id){
+  const c=cards.find(x=>x.id===id);
+  if(!c) return;
+  currentModalCardId=id;
+  renderModalPhotos(c);
+  document.getElementById('modalName').textContent=c.name;
+  document.getElementById('modalSet').textContent=`${c.setName||''} ${c.localId?'#'+c.localId:''} • ${c.category}`;
+
+  document.getElementById('modalGrid').innerHTML=`
+    <div class="detail-cell"><div class="label">Wert</div><div class="value" style="color:var(--accent)">${fmtE(c.price||0)}</div></div>
+    <div class="detail-cell"><div class="label">Sprache</div><div class="value">${c.language||'–'}</div></div>
+    ${c.grade||c.condition?`<div class="detail-cell"><div class="label">${c.grade?'Grade':'Zustand'}</div><div class="value">${c.grade||c.condition}</div></div>`:''}
+    <div class="detail-cell"><div class="label">Hinzugefügt</div><div class="value" style="font-size:12px">${c.dateAdded?new Date(c.dateAdded).toLocaleDateString('de-DE'):'–'}</div></div>
+  `;
+
+  // Price history chart
+  if(modalChart){modalChart.destroy();modalChart=null}
+  if(c.priceHistory&&c.priceHistory.length>1){
+    modalChart=new Chart(document.getElementById('modalPriceChart'),{
+      type:'line',
+      data:{labels:c.priceHistory.map(p=>p.date),datasets:[{data:c.priceHistory.map(p=>p.price),
+        borderColor:COLORS?.accent||'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',fill:true,tension:.3,pointRadius:3}]},
+      options:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:'#f1f5f9'},ticks:{callback:v=>v+'€',font:{size:10}}}}}
+    });
+  }
+
+  document.getElementById('modalDeleteBtn').onclick=async()=>{
+    if(confirm('Karte wirklich löschen?')){
+      await deleteCard(c.id);
+      await loadCards();
+      closeModal();
+      renderCollection();
+      renderDashboard();
+    }
+  };
+  document.getElementById('cardModal').classList.add('open');
+}
+
+function closeModal(){document.getElementById('cardModal').classList.remove('open')}
+
+// ═══════════════════════════════════════════════
+// Excel Import
+// ═══════════════════════════════════════════════
+document.getElementById('fileInput').addEventListener('change',async e=>{
+  if(!e.target.files[0]) return;
+  const buf=await e.target.files[0].arrayBuffer();
+  const wb=XLSX.read(buf,{type:'array'});
+  const imported=[];
+
+  // Generic card sheet parser
+  // Binder/Random Binder: Row0=Title, Row1=Headers(Karte,Sprache,Preis), Data from Row2, cols 0-2
+  // Eeveelution/Sealed Promos/151/Terastal: Row0=Title, Row1=Headers(Karte,Sprache,Zustand,Preis), Data from Row2, cols 0-3
+  function parseSheet(name, category, hasZustand){
+    const sheet=wb.Sheets[name];
+    if(!sheet) return;
+    const rows=XLSX.utils.sheet_to_json(sheet,{header:1});
+    rows.forEach((r,i)=>{
+      if(i<2) return; // Skip title row + header row
+      const karte=r[0];
+      if(!karte||typeof karte!=='string') return;
+      if(karte==='Karte') return;
+
+      let sprache='', zustand='', preis=0;
+      if(hasZustand){
+        sprache=r[1]||'';
+        zustand=r[2]||'';
+        preis=typeof r[3]==='number'?r[3]:parseFloat(r[3])||0;
+      } else {
+        sprache=r[1]||'';
+        zustand=''; // No condition column — leave empty
+        preis=typeof r[2]==='number'?r[2]:parseFloat(r[2])||0;
+      }
+
+      if(isNaN(preis)||preis===0) return;
+      imported.push({
+        name:String(karte), tcgdexId:'', setId:'', setName:category,
+        localId:'', image:'', rarity:'', category,
+        language:sprache, condition:zustand, grade:'',
+        price:preis, priceTrend:null, photos:[],
+        priceHistory:[{date:new Date().toISOString().slice(0,10),price:preis}],
+        dateAdded:new Date().toISOString()
+      });
+    });
+  }
+
+  parseSheet('Binder','Binder',false);
+  parseSheet('Eeveelution','Eevee Binder',true);
+  parseSheet('Random Binder','Random Binder',false);
+  parseSheet('Sealed Promos','Sealed Promos',true);
+  parseSheet('151 Master','151 Master',true);
+  parseSheet('Terastal Festival Master','Terastal Master',true);
+
+  // Slabs: Row0=Headers(Karte,Grade,Sprache,Preis), Data from Row1
+  const slabSheet=wb.Sheets['Slabs'];
+  if(slabSheet){
+    XLSX.utils.sheet_to_json(slabSheet,{header:1}).forEach((r,i)=>{
+      if(i===0) return; // Header row
+      if(r[0]&&typeof r[0]==='string'&&r[0]!=='Karte'&&r[1]&&typeof r[3]==='number'){
+        imported.push({
+          name:String(r[0]), tcgdexId:'', setId:'', setName:'Slabs',
+          localId:'', image:'', rarity:'', category:'Slabs',
+          language:String(r[2]||''), condition:'', grade:String(r[1]),
+          price:r[3], priceTrend:null, photos:[],
+          priceHistory:[{date:new Date().toISOString().slice(0,10),price:r[3]}],
+          dateAdded:new Date().toISOString()
+        });
+      }
+    });
+  }
+
+  // Sealed: Row0=Headers(Typ,Sealed/Name,Sprache,Anzahl,Preis), Data from Row1
+  const sealedSheet=wb.Sheets['Sealed'];
+  if(sealedSheet){
+    XLSX.utils.sheet_to_json(sealedSheet,{header:1}).forEach((r,i)=>{
+      if(i===0) return; // Header row
+      if(r[0]&&typeof r[0]==='string'&&r[0]!=='Typ'&&r[1]&&typeof r[4]==='number'){
+        imported.push({
+          name:String(r[1]), tcgdexId:'', setId:'', setName:String(r[0]),
+          localId:'', image:'', rarity:'', category:'Sealed',
+          language:String(r[2]||''), condition:'Sealed', grade:'',
+          price:r[4], priceTrend:null, photos:[],
+          priceHistory:[{date:new Date().toISOString().slice(0,10),price:r[4]}],
+          dateAdded:new Date().toISOString()
+        });
+      }
+    });
+  }
+
+  if(imported.length){
+    // Smart Merge: match existing cards by name+language+category, keep images
+    if(cards.length){
+      const choice=confirm(
+        `${imported.length} Karten gefunden.\n\n`+
+        `OK = Smart-Merge (Bilder behalten, neue Karten hinzufügen, Preise aktualisieren)\n`+
+        `Abbrechen = Import abbrechen`
+      );
+      if(!choice) return;
+
+      // Build lookup of existing cards: key = name|language|category
+      const existMap=new Map();
+      for(const c of cards){
+        const key=(c.name||'').trim()+'|'+(c.language||'')+'|'+(c.category||'');
+        existMap.set(key, c);
+      }
+
+      let updated=0, added=0, removed=0;
+
+      // Track which existing cards are still in the import
+      const matchedIds=new Set();
+
+      for(const imp of imported){
+        const key=(imp.name||'').trim()+'|'+(imp.language||'')+'|'+(imp.category||'');
+        const existing=existMap.get(key);
+        if(existing){
+          // Card exists — keep image, tcgdexId, photos; update price
+          matchedIds.add(existing.id);
+          if(existing.price!==imp.price){
+            existing.price=imp.price;
+            existing.priceHistory=existing.priceHistory||[];
+            existing.priceHistory.push({date:new Date().toISOString().slice(0,10),price:imp.price});
+            await updateCard(existing);
+            updated++;
+          }
+          // Update condition/grade if changed
+          if(imp.condition&&imp.condition!==existing.condition){existing.condition=imp.condition;await updateCard(existing)}
+          if(imp.grade&&imp.grade!==existing.grade){existing.grade=imp.grade;await updateCard(existing)}
+        } else {
+          // New card — add it
+          await addCard(imp);
+          added++;
+        }
+      }
+
+      // Remove cards no longer in Excel
+      const importKeys=new Set(imported.map(c=>(c.name||'').trim()+'|'+(c.language||'')+'|'+(c.category||'')));
+      for(const c of cards){
+        const key=(c.name||'').trim()+'|'+(c.language||'')+'|'+(c.category||'');
+        if(!importKeys.has(key)){
+          await deleteCard(c.id);
+          removed++;
+        }
+      }
+
+      await loadCards();
+      activeFilter='Alle';
+      renderDashboard();
+      const msg=[];
+      if(added) msg.push(added+' neue Karten');
+      if(updated) msg.push(updated+' Preise aktualisiert');
+      if(removed) msg.push(removed+' entfernt');
+      if(!added&&!updated&&!removed) msg.push('Keine Änderungen');
+      alert('Smart-Merge: '+msg.join(', ')+'.\nBilder bleiben erhalten!');
+      // Only match images for cards without images
+      if(cards.some(c=>!c.image)) matchAllImages();
+    } else {
+      // First import — no existing data
+      for(const c of imported) await addCard(c);
+      await loadCards();
+      activeFilter='Alle';
+      renderDashboard();
+      alert(`${imported.length} Karten importiert! Bilder werden jetzt geladen...`);
+      matchAllImages();
+    }
+  }
+  e.target.value='';
+});
+
+// ═══════════════════════════════════════════════
+// Price Update via TCGdex
+// ═══════════════════════════════════════════════
+async function updateAllPrices(){
+  const status=document.getElementById('priceUpdateStatus');
+  const cardsWithId=cards.filter(c=>c.tcgdexId);
+  if(!cardsWithId.length){
+    status.textContent='Keine Karten mit TCGdex-ID gefunden';
+    return;
+  }
+  status.textContent=`Aktualisiere 0/${cardsWithId.length}...`;
+  let updated=0;
+  for(const c of cardsWithId){
+    try{
+      const r=await fetch(`${TCGDEX}/de/cards/${c.tcgdexId}`);
+      if(r.ok){
+        const data=await r.json();
+        const newPrice=data.pricing?.cardmarket?.trend;
+        if(newPrice!=null){
+          const oldPrice=c.price;
+          c.price=newPrice;
+          c.priceTrend=oldPrice?((newPrice-oldPrice)/oldPrice*100):0;
+          if(!c.priceHistory) c.priceHistory=[];
+          const today=new Date().toISOString().slice(0,10);
+          if(!c.priceHistory.find(p=>p.date===today))
+            c.priceHistory.push({date:today,price:newPrice});
+          await updateCard(c);
+          updated++;
+        }
+      }
+    }catch{}
+    status.textContent=`Aktualisiere ${updated}/${cardsWithId.length}...`;
+    await new Promise(ok=>setTimeout(ok,100)); // Rate limit
+  }
+  await loadCards();
+  status.textContent=`${updated} Preise aktualisiert!`;
+  renderDashboard();
+  setTimeout(()=>{status.textContent='Cardmarket-Preise via TCGdex'},3000);
+}
+
+// ═══════════════════════════════════════════════
+// Export / Import JSON
+// ═══════════════════════════════════════════════
+function exportCollection(){
+  const blob=new Blob([JSON.stringify(cards,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`pokevault-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importJSON(){
+  document.getElementById('jsonInput').click();
+}
+document.getElementById('jsonInput').addEventListener('change',async e=>{
+  if(!e.target.files[0]) return;
+  const text=await e.target.files[0].text();
+  try{
+    const data=JSON.parse(text);
+    if(!Array.isArray(data)) throw new Error('Kein Array');
+    if(cards.length&&!confirm(`${data.length} Karten importieren? Bestehende Daten werden überschrieben.`)) return;
+    await clearDB();
+    let withImg=0, noImg=0;
+    for(const c of data){
+      delete c.id;
+      if(c.image) withImg++; else noImg++;
+      await addCard(c);
+    }
+    await loadCards();
+    activeFilter='Alle';
+    renderDashboard();
+    alert(`✅ ${data.length} Karten importiert!\n${withImg} mit Bild, ${noImg} ohne Bild.\n\nAlle Bilder werden aus dem Internet geladen.`);
+  }catch(err){alert('Fehler: '+err.message)}
+  e.target.value='';
+});
+
+// ═══════════════════════════════════════════════
+// Dropbox Sync — save as collection-data.js
+// ═══════════════════════════════════════════════
+function syncForPhone(){
+  if(!cards.length){
+    document.getElementById('syncStatus').textContent='Keine Karten zum Speichern!';
+    return;
+  }
+  document.getElementById('syncStatus').textContent='Erstelle Handy-Version...';
+  // Safely encode card data for embedding in HTML
+  const jsonStr=JSON.stringify(cards).replace(/<\//g,'<\\/');
+  // Clone entire HTML and embed card data
+  const clone=document.documentElement.cloneNode(true);
+  // Remove collection-data.js script and the null initializer
+  clone.querySelectorAll('script[src="collection-data.js"]').forEach(s=>s.remove());
+  clone.querySelectorAll('script').forEach(s=>{
+    if(s.textContent.includes('COLLECTION_DATA=null')||s.textContent.includes('COLLECTION_DATA =null'))
+      s.remove();
+  });
+  // Remove runtime DOM state (rendered cards, charts, modals)
+  const viewsToClean=clone.querySelectorAll('#dashTop5, #catList, #collCards, #apiResults');
+  viewsToClean.forEach(el=>el.innerHTML='');
+  // Inject data script into head — BEFORE other scripts
+  const dataScript=document.createElement('script');
+  dataScript.textContent='window.COLLECTION_DATA = '+jsonStr+';';
+  const head=clone.querySelector('head');
+  const firstScript=head.querySelector('script');
+  if(firstScript) head.insertBefore(dataScript, firstScript);
+  else head.appendChild(dataScript);
+  const html='<!DOCTYPE html>\n'+clone.outerHTML;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='maurice-tcg.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  document.getElementById('syncStatus').textContent='✅ maurice-tcg.html erstellt! In Dropbox legen & am Handy öffnen.';
+  setTimeout(()=>{document.getElementById('syncStatus').textContent='Komplette App + Daten als eine HTML-Datei'},8000);
+}
+
+function clearAllData(){
+  if(!confirm('Wirklich ALLE Daten löschen? Das kann nicht rückgängig gemacht werden!')) return;
+  clearDB().then(()=>{cards=[];renderDashboard();alert('Alle Daten gelöscht.')});
+}
+
+// ═══════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════
+Chart.defaults.font.family="'Inter',sans-serif";
+
+(async()=>{
+  await openDB();
+  await loadCards();
+
+  // Auto-load from embedded COLLECTION_DATA (Dropbox sync / Für Handy speichern)
+  if(!cards.length && window.COLLECTION_DATA && Array.isArray(window.COLLECTION_DATA)){
+    const data=window.COLLECTION_DATA;
+    let withImg=0;
+    for(const c of data){delete c.id; if(c.image) withImg++; await addCard(c);}
+    await loadCards();
+    // Show sync banner
+    const banner=document.createElement('div');
+    banner.style.cssText='position:fixed;top:60px;left:10px;right:10px;z-index:999;background:#1a5c2a;color:#fff;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.4)';
+    banner.textContent=`✅ Sync: ${data.length} Karten geladen (${withImg} mit Bild)`;
+    document.body.appendChild(banner);
+    setTimeout(()=>banner.remove(),5000);
+  }
+
+  renderDashboard();
+  // Register service worker — force update
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(regs=>{
+      regs.forEach(r=>r.unregister());
+    });
+    caches.keys().then(keys=>keys.forEach(k=>caches.delete(k)));
+    setTimeout(()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}),500);
+  }
+  // Hide splash screen
+  setTimeout(()=>{ document.getElementById('splash').classList.add('hide'); },2000);
+})();
