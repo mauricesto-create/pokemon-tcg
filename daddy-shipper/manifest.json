@@ -1,8 +1,8 @@
 {
-  "version": "3.2.3",
-  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.2.3/DaddyShipperSetup-3.2.3.exe",
-  "sha256": "106ace5d57058e6c7ee980c849d62a20c7729fb4c8e7cd87c4964394b4dbbd02",
-  "release_notes": "Daddy Shipper v3.2.3",
-  "released_at": "2026-07-21T08:13:43.498801+00:00",
-  "size_bytes": 56867310
+  "version": "3.2.4",
+  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.2.4/DaddyShipperSetup-3.2.4.exe",
+  "sha256": "2a21f6f79c60ba01652c58cac03fe3d957930f055aaae1d94507c38ce9e44033",
+  "release_notes": "Haengende Bestellungen gefixt: Kaeufer bleibt bei eBay-Fehler sichtbar + Warnung, neuer Knopf Versand bestaetigen (fuer extern erstellte Labels, z.B. Express), Hausnummer aus Adresszeile 2 wird erkannt",
+  "released_at": "2026-07-23T15:01:58.288590+00:00",
+  "size_bytes": 56861675
 }
