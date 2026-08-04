@@ -601,6 +601,13 @@ canvas{max-width:100%!important}
     </div>
     <div class="right">›</div>
   </div>
+  <div class="settings-item" onclick="cleanupCategories()">
+    <div class="left">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+      <div><div class="label">Kategorien bereinigen</div><div class="desc" id="cleanupStatus">Random Binder / Mega Dream / Trade Binder → AR Binder</div></div>
+    </div>
+    <div class="right">›</div>
+  </div>
   <div class="settings-item" onclick="rematchAllSets()">
     <div class="left">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
@@ -2310,6 +2317,51 @@ async function debugFindCard(name){
   } else log.push('P4: skip');
 
   return log.join('\n');
+}
+
+const DEAD_CATEGORIES={'Random Binder':'AR Binder','Mega Dream':'AR Binder','Trade Binder':'AR Binder'};
+
+async function cleanupCategories(){
+  const status=document.getElementById('cleanupStatus');
+  const targets=cards.filter(c=>DEAD_CATEGORIES[c.category]);
+  status.textContent=`${targets.length} Karten werden verschoben...`;
+  let moved=0;
+  try{
+    bulkMode=true;
+    for(const c of targets){
+      c.category=DEAD_CATEGORIES[c.category];
+      await updateCard(c);
+      moved++;
+      if(moved%10===0) status.textContent=`${moved}/${targets.length} verschoben...`;
+    }
+    bulkMode=false;
+    // Tote Kategorien aus customCategories entfernen
+    const before=customCategories.length;
+    customCategories=customCategories.filter(c=>!DEAD_CATEGORIES[c.name]);
+    for(const dead of Object.keys(DEAD_CATEGORIES)){
+      delete CAT_ICONS[dead];
+      delete CAT_COLORS[dead];
+    }
+    CATEGORIES=CATEGORIES.filter(([v])=>!DEAD_CATEGORIES[v]);
+    if(customCategories.length!==before){
+      await db.collection('users').doc(uid).set({customCategories},{merge:true});
+    }
+    refreshCategorySelects();
+    await loadCards();
+    if(activeFilter&&DEAD_CATEGORIES[activeFilter]) activeFilter='Alle';
+    renderDashboard();
+    renderCollection();
+    status.textContent=`✓ ${moved} Karten verschoben, Kategorien entfernt`;
+    showToast(`${moved} Karten in AR Binder verschoben`);
+  }catch(err){
+    bulkMode=false;
+    const msg=err.code==='permission-denied'
+      ?'Keine Schreibrechte (Firestore-Rules prüfen)'
+      :(err.message||err.code||'Unbekannter Fehler');
+    status.textContent='Fehler: '+msg;
+    showToast('Fehler: '+msg,'var(--red)');
+  }
+  setTimeout(()=>{status.textContent='Random Binder / Mega Dream / Trade Binder → AR Binder'},8000);
 }
 
 async function rematchAllSets(){
