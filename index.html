@@ -3453,6 +3453,10 @@ auth.onAuthStateChanged(async user=>{
     // Rename: Move all cards from Trade Binder to AR Binder
     const tradeToAr=cards.filter(c=>c.category==='Trade Binder');
     tradeToAr.forEach(c=>c.category='AR Binder');
+    // Move all Eeveelutions (DE + EN Namen) from "Binder" to "Eevee Highclass Binder"
+    const EEVEE_RE=/\b(eevee|evoli|vaporeon|aquana|jolteon|blitza|flareon|flamara|espeon|psiana|umbreon|nachtara|leafeon|folipurba|glaceon|glaziola|sylveon|feelinara)\b/i;
+    const eeveeToHighclass=cards.filter(c=>c.category==='Binder'&&c.name&&EEVEE_RE.test(c.name));
+    eeveeToHighclass.forEach(c=>c.category='Eevee Highclass Binder');
     // Promote first photo to c.image if c.image is empty but photos[0] is a valid URL
     const photoToImage=cards.filter(c=>!c.image&&Array.isArray(c.photos)&&c.photos.length>0&&typeof c.photos[0]==='string'&&c.photos[0].trim().length>10);
     photoToImage.forEach(c=>{c.image=c.photos[0];c.manualImage=true});
@@ -3503,7 +3507,7 @@ auth.onAuthStateChanged(async user=>{
         setFix.push(c);
       }
     }
-    const allFix=[...toFix,...sealedFix,...sealedImgFix,...masterFix,...gradeFix,...langFix,...setFix,...m2aFix,...tradeToAr,...photoToImage,...targetedFix];
+    const allFix=[...toFix,...sealedFix,...sealedImgFix,...masterFix,...gradeFix,...langFix,...setFix,...m2aFix,...tradeToAr,...eeveeToHighclass,...photoToImage,...targetedFix];
     if(allFix.length){bulkMode=true;for(const c of toFix){c.condition=condMap[c.condition]};for(const c of allFix){await updateCard(c)}bulkMode=false;await loadCards()}
     renderDashboard();
 
