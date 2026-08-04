@@ -889,7 +889,7 @@ let bulkMode = false; // suppress re-renders during bulk operations
 let unsubCards = null; // Firestore snapshot listener
 
 const SEALED_IMG="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='420' viewBox='0 0 300 420'%3E%3Crect width='300' height='420' rx='16' fill='%231a1f2e'/%3E%3Crect x='40' y='60' width='220' height='160' rx='14' fill='%23252d45' stroke='%23d4a44a' stroke-width='3'/%3E%3Crect x='32' y='44' width='236' height='34' rx='10' fill='%232d3655' stroke='%23d4a44a' stroke-width='3'/%3E%3Crect x='138' y='44' width='24' height='180' fill='%23d4a44a' opacity='0.15'/%3E%3Cline x1='40' y1='140' x2='260' y2='140' stroke='%23d4a44a' stroke-width='1' opacity='0.2'/%3E%3Ccircle cx='150' cy='120' r='30' fill='%23d4a44a' opacity='0.15' stroke='%23d4a44a' stroke-width='2' stroke-opacity='0.6'/%3E%3Ctext x='150' y='130' text-anchor='middle' font-family='system-ui' font-size='28' fill='%23d4a44a' opacity='0.8'%3E%E2%9C%A7%3C/text%3E%3Ctext x='150' y='290' text-anchor='middle' font-family='system-ui,sans-serif' font-size='28' font-weight='800' letter-spacing='6' fill='%23d4a44a'%3ESEALED%3C/text%3E%3Cline x1='70' y1='305' x2='230' y2='305' stroke='%23d4a44a' stroke-width='2' opacity='0.4'/%3E%3Ctext x='150' y='345' text-anchor='middle' font-family='system-ui' font-size='13' fill='%23d4a44a' opacity='0.5'%3ECOLLECTION ITEM%3C/text%3E%3C/svg%3E";
-const CAT_COLORS = {'Slabs':'#8b5cf6','Binder':'#3b82f6','Sealed':'#10b981','Random Binder':'#f59e0b',
+const CAT_COLORS = {'Slabs':'#8b5cf6','Binder':'#3b82f6','Sealed':'#10b981',
   'Eevee Binder':'#ec4899','151 Master':'#06b6d4','Terastal Master':'#6366f1','Sealed Promos':'#94a3b8'};
 const LANG_COLORS = {JP:'#ef4444',DE:'#3b82f6',EN:'#10b981',FR:'#f59e0b',CN:'#8b5cf6'};
 
@@ -1014,12 +1014,12 @@ function getSetName(setId){
   if(!setId) return '';
   return SET_NAMES[setId]||SET_NAMES[setId.toLowerCase()]||SET_NAMES[setId.toUpperCase()]||setId;
 }
-const CAT_ICONS={'Slabs':'🏅','Binder':'📒','Sealed':'🎴','Random Binder':'🃏',
+const CAT_ICONS={'Slabs':'🏅','Binder':'📒','Sealed':'🎴',
   'Eevee Binder':'🌙','151 Master':'🔴','Terastal Master':'💎','Sealed Promos':'⭐'};
 const ICON_CHOICES=['📒','📕','📗','📘','📙','🗂️','🏅','🎴','🃏','⭐','💎','🔴','🌙','🔥','⚡','💧','🌿','🐉','👑','🎯','🏆','💰','📦','🎁','🎪','🧊','💫','🌈','🖤','❤️'];
 const DEFAULT_COLORS=['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#6366f1','#f97316','#94a3b8'];
 const TCGDEX='https://api.tcgdex.net/v2';
-let CATEGORIES=[['Binder','Binder'],['Eevee Binder','Eevee Binder'],['Random Binder','Random Binder'],['Slabs','Slabs'],['Sealed','Sealed'],['Sealed Promos','Sealed Promos'],['151 Master','151 Master JP'],['Terastal Master','Terastal Master']];
+let CATEGORIES=[['Binder','Binder'],['Eevee Binder','Eevee Binder'],['Slabs','Slabs'],['Sealed','Sealed'],['Sealed Promos','Sealed Promos'],['151 Master','151 Master JP'],['Terastal Master','Terastal Master']];
 const LANGUAGES=[['JP','Japanisch (JP)'],['DE','Deutsch (DE)'],['EN','Englisch (EN)'],['FR','Französisch (FR)'],['CN','Chinesisch (CN)']];
 const CONDITIONS=[['NM','Near Mint (NM)'],['EXC','Excellent (EXC)'],['GD','Good (GD)'],['LP','Light Played (LP)'],['PL','Played (PL)'],['PO','Poor (PO)'],['Sealed','Sealed']];
 function fillSelect(id,opts){const el=document.getElementById(id);if(!el)return;el.innerHTML=opts.map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}
@@ -3146,7 +3146,7 @@ document.getElementById('fileInput').addEventListener('change',async e=>{
 
   parseSheet('Binder','Binder',false);
   parseSheet('Eeveelution','Eevee Binder',true);
-  parseSheet('Random Binder','Random Binder',false);
+  parseSheet('Random Binder','AR Binder',false);
   parseSheet('Sealed Promos','Sealed Promos',true);
   parseSheet('151 Master','151 Master',true);
   parseSheet('Terastal Festival Master','Terastal Master',true);
@@ -3447,12 +3447,15 @@ auth.onAuthStateChanged(async user=>{
       try{await db.collection('users').doc(uid).set({customCategories},{merge:true})}catch(e){}
       refreshCategorySelects();
     }
-    // Reverse: Move all cards from Mega Dream back to Random Binder
+    // Reverse: Mega Dream aufgeloest → AR Binder
     const m2aFix=cards.filter(c=>c.category==='Mega Dream');
-    m2aFix.forEach(c=>c.category='Random Binder');
+    m2aFix.forEach(c=>c.category='AR Binder');
     // Rename: Move all cards from Trade Binder to AR Binder
     const tradeToAr=cards.filter(c=>c.category==='Trade Binder');
     tradeToAr.forEach(c=>c.category='AR Binder');
+    // Random Binder aufgeloest → AR Binder
+    const randomToAr=cards.filter(c=>c.category==='Random Binder');
+    randomToAr.forEach(c=>c.category='AR Binder');
     // Move all Eeveelutions (DE + EN Namen) from "Binder" to "Eevee Highclass Binder"
     const EEVEE_RE=/\b(eevee|evoli|vaporeon|aquana|jolteon|blitza|flareon|flamara|espeon|psiana|umbreon|nachtara|leafeon|folipurba|glaceon|glaziola|sylveon|feelinara)\b/i;
     const eeveeToHighclass=cards.filter(c=>c.category==='Binder'&&c.name&&EEVEE_RE.test(c.name));
@@ -3507,7 +3510,7 @@ auth.onAuthStateChanged(async user=>{
         setFix.push(c);
       }
     }
-    const allFix=[...toFix,...sealedFix,...sealedImgFix,...masterFix,...gradeFix,...langFix,...setFix,...m2aFix,...tradeToAr,...eeveeToHighclass,...photoToImage,...targetedFix];
+    const allFix=[...toFix,...sealedFix,...sealedImgFix,...masterFix,...gradeFix,...langFix,...setFix,...m2aFix,...tradeToAr,...randomToAr,...eeveeToHighclass,...photoToImage,...targetedFix];
     if(allFix.length){bulkMode=true;for(const c of toFix){c.condition=condMap[c.condition]};for(const c of allFix){await updateCard(c)}bulkMode=false;await loadCards()}
     renderDashboard();
 
