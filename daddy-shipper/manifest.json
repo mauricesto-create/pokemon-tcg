@@ -1,8 +1,8 @@
 {
-  "version": "3.2.6",
-  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.2.6/DaddyShipperSetup-3.2.6.exe",
-  "sha256": "dba54c09f2d3ce606a9729f625db0f631aa3b54df5526e059d9b3cf1ac1a21cb",
-  "release_notes": "Daddy Shipper v3.2.6",
-  "released_at": "2026-07-31T13:07:49.908843+00:00",
-  "size_bytes": 56873464
+  "version": "3.2.7",
+  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.2.7/DaddyShipperSetup-3.2.7.exe",
+  "sha256": "ec61c750f2fe68d102aa6dec7794238af43d25d4e46f81d4249c08cf52d3b914",
+  "release_notes": "Mengen-Fix: Betrag in der Kaeuferliste stimmt bei Mehrfach-Kaeufen (keine Doppel-Multiplikation mehr), nur noch 1 Artikel-Label pro Bestellposition (Menge steht als 60x im Titel)",
+  "released_at": "2026-08-13T19:31:27.273363+00:00",
+  "size_bytes": 56873698
 }
