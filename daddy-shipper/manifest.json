@@ -1,8 +1,8 @@
 {
-  "version": "3.3.1",
-  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.3.1/DaddyShipperSetup-3.3.1.exe",
-  "sha256": "44d2494174211b2b13b558ef03b6ea80aba2774cabadd6274b06b547534a2ad2",
-  "release_notes": "Fix: Einstellungen-Import f\u00fcllt wieder alle Felder inklusive Drucker-Auswahl.",
-  "released_at": "2026-08-14T16:11:28.851365+00:00",
-  "size_bytes": 56904686
+  "version": "3.3.2",
+  "url": "https://github.com/mauricesto-create/pokemon-tcg/releases/download/daddy-v3.3.2/DaddyShipperSetup-3.3.2.exe",
+  "sha256": "3c19d5286f2fe2f113ad644a09d4ea9013fc814ec79d9f92f29cd35a3ccedee8",
+  "release_notes": "Fix: Briefmarke wird jetzt gross auf der 100x150-Rolle gedruckt (Format-Korrektur) + Adresse-bearbeiten-Dialog besser lesbar.",
+  "released_at": "2026-08-15T14:26:53.693481+00:00",
+  "size_bytes": 56889648
 }
