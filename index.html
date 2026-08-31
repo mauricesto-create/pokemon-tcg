@@ -601,6 +601,13 @@ canvas{max-width:100%!important}
     </div>
     <div class="right">›</div>
   </div>
+  <div class="settings-item" onclick="exportCollectHoloCSV()">
+    <div class="left">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+      <div><div class="label">CollectHolo CSV</div><div class="desc" id="chExportStatus">CSV für collectholo.com Bulk-Import</div></div>
+    </div>
+    <div class="right">›</div>
+  </div>
   <div class="settings-item" onclick="cleanupCategories()">
     <div class="left">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
@@ -3328,6 +3335,62 @@ function exportCollection(){
   a.href=URL.createObjectURL(blob);
   a.download=`pokevault-backup-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
+}
+
+// ═══════════════════════════════════════════════
+// CollectHolo CSV Export
+// ═══════════════════════════════════════════════
+const CH_LANG={JP:'ja',DE:'de',EN:'en',FR:'fr',CN:'zh',IT:'it',KO:'ko'};
+const CH_COND={NM:'Near Mint',EXC:'Excellent',GD:'Good',LP:'Light Played',PL:'Played',PO:'Poor'};
+const CH_HEADER='product_name,collector_number,set_name,product_kind,language,quantity,grade,condition,purchase_price,currency';
+
+function csvCell(v){
+  const s=(v===null||v===undefined)?'':String(v);
+  return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+}
+
+function exportCollectHoloCSV(){
+  if(!cards.length){showToast('Keine Karten vorhanden','var(--red)');return}
+  const rows=[CH_HEADER];
+  let sealed=0,graded=0;
+  for(const c of cards){
+    const isSealed=c.category==='Sealed'||c.category==='Sealed Promos';
+    const info=c.name?extractSetInfo(c.name):null;
+    const name=c.name?cleanName(c.name):'';
+    if(!name) continue;
+    // condition ist bei ihm ein Feld: PSA/CGC/BGS/ACE/ARS/AGS → grade, sonst condition
+    const cond=c.condition||'';
+    const isGrade=/^(PSA|CGC|BGS|ACE|ARS|AGS|TAG|AOG)\b/i.test(cond);
+    const grade=isGrade?cond:'';
+    const rawCond=(!isGrade&&!isSealed)?(CH_COND[cond]||''):'';
+    if(isSealed) sealed++;
+    if(isGrade) graded++;
+    rows.push([
+      csvCell(name),
+      csvCell(isSealed?'':(info&&info.num?info.num:'')),
+      csvCell(isSealed?'':(c.setName||'')),
+      isSealed?'sealed':'card',
+      CH_LANG[c.language]||'en',
+      1,
+      csvCell(grade),
+      csvCell(rawCond),
+      c.price?String(c.price).replace('.',','):'',
+      c.price?'EUR':''
+    ].join(','));
+  }
+  const csv='﻿'+rows.join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`collectholo-import-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  const n=rows.length-1;
+  showToast(`${n} Zeilen exportiert (${sealed} Sealed, ${graded} Graded)`);
+  const st=document.getElementById('chExportStatus');
+  if(st){
+    st.textContent=`${n} Zeilen · ${sealed} Sealed · ${graded} Graded`;
+    setTimeout(()=>{st.textContent='CSV für collectholo.com Bulk-Import'},8000);
+  }
 }
 
 function importJSON(){
