@@ -3342,7 +3342,7 @@ function exportCollection(){
 // ═══════════════════════════════════════════════
 const CH_LANG={JP:'ja',DE:'de',EN:'en',FR:'fr',CN:'zh',IT:'it',KO:'ko'};
 const CH_COND={NM:'Near Mint',EXC:'Excellent',GD:'Good',LP:'Light Played',PL:'Played',PO:'Poor'};
-const CH_HEADER='product_name,collector_number,set_name,product_kind,language,quantity,grade,condition,purchase_price,currency';
+const CH_HEADER='product_name,collector_number,set_name,product_kind,language,quantity,grade,condition,printing_variance';
 
 function csvCell(v){
   const s=(v===null||v===undefined)?'':String(v);
@@ -3374,8 +3374,7 @@ function exportCollectHoloCSV(){
       1,
       csvCell(grade),
       csvCell(rawCond),
-      c.price?String(c.price).replace('.',','):'',
-      c.price?'EUR':''
+      ''
     ].join(','));
   }
   const csv='﻿'+rows.join('\r\n');
